@@ -83,7 +83,7 @@ cronbach <- psych::alpha(subset(simulated_ptsd_total, select = (-total)))
 cronbach$total
 ```
 
-Summary of items & histogram
+### 2.3 Summary of items & histogram
 
 ```{r PCL summary, echo=FALSE, message=FALSE}
 summary(simulated_ptsd_total)
@@ -98,22 +98,28 @@ Symptoms rated 2 or 3 will be considered as present. [not shown]
 ## set cut-off
 cut_off <- 1 #will be used with <= // 
 
-## Binarize
-data1_binarized <- simulated_ptsd_total
-n_cols <- ncol(data1_binarized)
-data1_binarized <- data1_binarized %>%
+##rename variables to "Q1-QN" for binarization
+n_cols <- ncol(simulated_ptsd_total)
+simulated_ptsd_rename <- simulated_ptsd_total %>%
   rename_with(~ paste0("Q", seq_len(n_cols - 2)), 1:(n_cols -2 ))
 
-for (i in 1:(ncol(data1_binarized)-2)){
+## Binarize
+data_binarized <- simulated_ptsd_rename
+
+for (i in 1:(ncol(data_binarized)-2)){
   orig <- paste("q", i, sep = "")
   bin <- paste("Q", i, sep = "")
-  data1_binarized[orig] <- dplyr::case_when(data1_binarized[bin]<= cut_off ~ 0, data1_binarized[bin]>cut_off ~ 1)  #0 = "Symptom absent", 1 = "Symptom present"
+  data1_binarized[orig] <- dplyr::case_when(data_binarized[bin]<= cut_off ~ 0, data_binarized[bin]>cut_off ~ 1)  #0 = "Symptom absent", 1 = "Symptom present"
 
 }
 
+#selecting only the "TRUE" Diagnosis
+data_binarized_diagnosed <- data_binarized %>%
+  filter(PTSD_Diagnosis=="TRUE")
+
 # Create new data frame
-data2 <- data1_binarized %>% 
-  select(PTSD_Diagnosis:ncol(data1_binarized)) %>% 
+data2 <- data_binarized_diagnosed %>% 
+  select(PTSD_Diagnosis:ncol(data_binarized)) %>% 
   select(-PTSD_Diagnosis) %>% 
   tibble()
 
@@ -132,9 +138,12 @@ datax <- dplyr::left_join(data1_binarized, data2_counted)
 
 
 ## Create dataframes for PsychPower Package 
-data_PTSD_PsychPower <- read_csv("Data/simulated_skewed_ptsd_data.csv") %>%  select (symptom_1:symptom_20)
+data_PTSD_PsychPower <- simulated_ptsd_total %>%  
+	filter(PTSD_Diagnosis=="TRUE") %>%
+  	select (symptom_1:symptom_20)
+#binarize
 data_binarized_PsychPower <- PsychPower::binarize(data_PTSD_PsychPower, cut_off = 1)
-
+#frequency
 data_frequency_PsychPower <- PsychPower::pheno_frequency(
   data_binarized_PsychPower, target_columns = tidyselect::starts_with("v_bin"))
 ```
