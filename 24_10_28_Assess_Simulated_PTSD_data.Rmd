@@ -1,0 +1,209 @@
+---
+title: "Assess Simulated PTSD Symptoms"
+author:
+- "<h5 style=\"font-style:italic\"> Laura Weidmann"
+- "<h5 style=\"font-style:italic\"> Tobias R. Spiller"
+date: "<h5 style=\"font-style:roman\"> `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+  pdf_document:
+    toc: true
+    toc_depth: '5'
+subtitle: Version 0.0.2
+---
+
+```{r Setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = TRUE,
+	warning = TRUE
+)
+```
+
+```{r Load Libraries, message=FALSE, warning=TRUE, include=FALSE}
+# Data handling
+library(tidyverse)
+library(readr)
+
+# Demographics
+library(table1)
+library(gtsummary)
+
+# Analysis
+#library("devtools")
+#devtools::install_github("orduek/PsychPower")
+library(PsychPower)
+```
+
+## 1. Import and prepare data
+
+```{r PCL import data, message=FALSE, warning=TRUE, include=FALSE}
+# Import data
+simulated_ptsd_data <- read_csv("Data/simulated_skewed_ptsd_data.csv")
+```
+
+## 2. Sample descriptive
+
+#### 2.1 Total score & Diagnosis
+
+```{r PCL Table 1, echo=FALSE, message=FALSE}
+# Create PCL total score
+simulated_ptsd_total <- simulated_ptsd_data %>% 
+  mutate(total = rowSums(select(., symptom_1:symptom_20)))
+
+# # Create Diagnosis
+simulated_ptsd_total <- simulated_ptsd_total %>%
+  mutate(
+    PTSD_Diagnosis = ifelse(
+      (symptom_1 > 2 | symptom_2 > 2 | symptom_3 > 2 | symptom_4 > 2 | symptom_5 > 2) &
+      (symptom_6 > 2 | symptom_7 > 2) &
+      (symptom_8 > 2 | symptom_9 > 2 | symptom_10 > 2 | symptom_11 > 2 | symptom_12 > 2 | symptom_13 > 2 | symptom_14 > 2) &
+      (symptom_15 > 2 | symptom_16 > 2 | symptom_17 > 2 | symptom_18 > 2 | symptom_19 > 2 | symptom_20 > 2),
+      TRUE, FALSE
+    )
+  )
+
+simulated_ptsd_total %>%
+  summarise(
+    mean_total = mean(total),
+    sd_total = sd(total),
+    n_diagnosed = sum(PTSD_Diagnosis)
+  )
+```
+
+#### 2.2 Cronbach's alpha
+
+Selected sample
+
+```{r PCL cronbach, echo=FALSE, message=FALSE}
+cronbach <- psych::alpha(subset(simulated_ptsd_total, select = (-total)))
+cronbach$total
+```
+
+Summary of items & histogram
+
+```{r PCL summary, echo=FALSE, message=FALSE}
+summary(simulated_ptsd_total)
+hist(simulated_ptsd_total$total)
+```
+
+## 3. Binarizing & create datax
+
+Symptoms rated 2 or 3 will be considered as present. [not shown]
+
+```{r PCL Binarizing, echo=FALSE, message=FALSE, warning=FALSE}
+## set cut-off
+cut_off <- 1 #will be used with <= // 
+
+## Binarize
+data1_binarized <- simulated_ptsd_total
+n_cols <- ncol(data1_binarized)
+data1_binarized <- data1_binarized %>%
+  rename_with(~ paste0("Q", seq_len(n_cols - 2)), 1:(n_cols -2 ))
+
+for (i in 1:(ncol(data1_binarized)-2)){
+  orig <- paste("q", i, sep = "")
+  bin <- paste("Q", i, sep = "")
+  data1_binarized[orig] <- dplyr::case_when(data1_binarized[bin]<= cut_off ~ 0, data1_binarized[bin]>cut_off ~ 1)  #0 = "Symptom absent", 1 = "Symptom present"
+
+}
+
+# Create new data frame
+data2 <- data1_binarized %>% 
+  select(PTSD_Diagnosis:ncol(data1_binarized)) %>% 
+  select(-PTSD_Diagnosis) %>% 
+  tibble()
+
+
+## Count frequency of profiles
+data2_counted <- plyr::count(data2[, ]) # 510
+
+# Create sum score of endorsed symptoms
+data2_counted <- data2_counted %>% 
+  mutate(total_bin = rowSums(data2_counted)-freq)
+
+
+## Create datax 
+# Create full dataset
+datax <- dplyr::left_join(data1_binarized, data2_counted)
+
+
+## Create dataframes for PsychPower Package 
+data_PTSD_PsychPower <- read_csv("Data/simulated_skewed_ptsd_data.csv") %>%  select (symptom_1:symptom_20)
+data_binarized_PsychPower <- PsychPower::binarize(data_PTSD_PsychPower, cut_off = 1)
+
+data_frequency_PsychPower <- PsychPower::pheno_frequency(
+  data_binarized_PsychPower, target_columns = tidyselect::starts_with("v_bin"))
+```
+
+## 4. Description of combinations
+
+Most common combination, its frequency & median frequency
+
+```{r PCL Describe Number, echo=FALSE, message=FALSE}
+desc_pheno_PsychPower <- PsychPower::describe_pheno(data_frequency_PsychPower, frequency = "freq") 
+desc_pheno_PsychPower
+```
+
+10 Most common Phenotype
+
+```{r PCL Describe 10 most, echo=FALSE, message=FALSE}
+PsychPower::common_pheno(data_frequency_PsychPower, frequency = "freq", n_phenotypes = 10)
+```
+
+Profiles (N, %) reported by less or equal than in 1% of the individuals
+
+```{r PCL Having less then 1 percent, echo=FALSE, message=FALSE}
+one_percent_sample = round(nrow(data_binarized_PsychPower)*0.01, 0)
+data2_counted %>% filter(freq<=one_percent_sample) %>% nrow()
+
+round((data2_counted %>% filter(freq<=one_percent_sample) %>% nrow()) / nrow(data2_counted), 3)
+```
+
+Individuals reporting one of the ten most common combinations
+
+```{r PCL Having 10 most, echo=FALSE, message=FALSE}
+data2_counted <- data2_counted %>% 
+  arrange(desc(freq))
+data2_counted[1:10,] %>% summarise(sum(freq))
+```
+
+Individuals reporting NOT one of the ten most common combinations
+
+```{r PCL  Not Having 10 most, echo=FALSE, message=FALSE}
+data2_counted[11:nrow(data2_counted),] %>% summarise(sum(freq))
+```
+
+Individuals reporting 1% most common combinations
+
+```{r PCL Describe 1 percent, echo=FALSE, message=FALSE}
+one_percent =  round(nrow(data2_counted)*0.01, 0)
+
+data2_counted[1:one_percent,] %>% summarise(sum(freq))
+```
+
+Individuals reporting one of the 50% least common combinations
+
+```{r PCL Describe 50 percent, echo=FALSE, message=FALSE}
+fifty_percent =  round(nrow(data2_counted)*0.5, 0)
+
+data2_counted[fifty_percent:nrow(data2_counted),] %>% summarise(sum(freq))
+
+```
+
+Plot 100 most common profiles
+
+```{r Plot 100 most common, echo=FALSE, message=FALSE}
+fig1 <- PsychPower::plot_pheno(data_frequency_PsychPower, frequency = "freq",
+                               n_phenotypes = 100, color = "grey26")
+fig1
+```
+
+## 5. Session Info
+
+```{r Session Info, echo=FALSE, message=FALSE}
+sessionInfo()
+```
