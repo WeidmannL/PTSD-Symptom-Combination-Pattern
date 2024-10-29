@@ -109,7 +109,7 @@ data_binarized <- simulated_ptsd_rename
 for (i in 1:(ncol(data_binarized)-2)){
   orig <- paste("q", i, sep = "")
   bin <- paste("Q", i, sep = "")
-  data1_binarized[orig] <- dplyr::case_when(data_binarized[bin]<= cut_off ~ 0, data_binarized[bin]>cut_off ~ 1)  #0 = "Symptom absent", 1 = "Symptom present"
+  data_binarized[orig] <- dplyr::case_when(data_binarized[bin]<= cut_off ~ 0, data_binarized[bin]>cut_off ~ 1)  #0 = "Symptom absent", 1 = "Symptom present"
 
 }
 
@@ -134,7 +134,7 @@ data2_counted <- data2_counted %>%
 
 ## Create datax 
 # Create full dataset
-datax <- dplyr::left_join(data1_binarized, data2_counted)
+datax <- dplyr::left_join(data_binarized, data2_counted)
 
 
 ## Create dataframes for PsychPower Package 
