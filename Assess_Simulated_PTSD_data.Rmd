@@ -27,6 +27,7 @@ knitr::opts_chunk$set(
 # Data handling
 library(tidyverse)
 library(readr)
+library(data.table)
 
 # Demographics
 library(table1)
@@ -55,17 +56,47 @@ simulated_ptsd_total <- simulated_ptsd_data %>%
   mutate(total = rowSums(select(., symptom_1:symptom_20)))
 
 # # Create Diagnosis
-simulated_ptsd_total <- simulated_ptsd_total %>%
-  mutate(
-    PTSD_Diagnosis = ifelse(
-      (symptom_1 > 2 | symptom_2 > 2 | symptom_3 > 2 | symptom_4 > 2 | symptom_5 > 2) &
-      (symptom_6 > 2 | symptom_7 > 2) &
-      (symptom_8 > 2 | symptom_9 > 2 | symptom_10 > 2 | symptom_11 > 2 | symptom_12 > 2 | symptom_13 > 2 | symptom_14 > 2) &
-      (symptom_15 > 2 | symptom_16 > 2 | symptom_17 > 2 | symptom_18 > 2 | symptom_19 > 2 | symptom_20 > 2),
-      TRUE, FALSE
-    )
-  )
+#simulated_ptsd_total <- simulated_ptsd_total %>%
+  #mutate(
+    #PTSD_Diagnosis = ifelse(
+      #(symptom_1 > 2 | symptom_2 > 2 | symptom_3 > 2 | symptom_4 > 2 | symptom_5 > 2) &
+      #(symptom_6 > 2 | symptom_7 > 2) &
+      #(symptom_8 > 2 | symptom_9 > 2 | symptom_10 > 2 | symptom_11 > 2 | symptom_12 > 2 | symptom_13 > 2 | symptom_14 #> 2) &
+      #(symptom_15 > 2 | symptom_16 > 2 | symptom_17 > 2 | symptom_18 > 2 | symptom_19 > 2 | symptom_20 > 2),
+      #TRUE, FALSE
+    #)
+  #)
 
+# Create function that implements PTSD diagnostic criteria
+  create_ptsd_diagnosis <- function(data) {
+    
+    # Create new column initially set to FALSE
+    data$PTSD_Diagnosis <- FALSE
+    
+    # Check total score criterion
+    total_criterion <- data$total >= 33
+    
+    # Check symptom criteria
+    criterion_B <- rowSums(data[, paste0("symptom_", 1:5)] >= 2) >= 1  # At least 1 from symptoms 1-5
+    criterion_C <- rowSums(data[, paste0("symptom_", 6:7)] >= 2) >= 1  # At least 1 from symptoms 6-7
+    criterion_D <- rowSums(data[, paste0("symptom_", 8:14)] >= 2) >= 2 # At least 2 from symptoms 8-14
+    criterion_E <- rowSums(data[, paste0("symptom_", 15:20)] >= 2) >= 2 # At least 2 from symptoms 15-20
+    
+    # All symptom criteria met
+    all_symptom_criteria <- criterion_B & criterion_C & criterion_D & criterion_E
+    
+    # Combined criteria: Either total >= 33 OR all symptom criteria met OR both conditions together
+    data$PTSD_Diagnosis <- total_criterion | 
+      all_symptom_criteria |
+      (total_criterion & all_symptom_criteria)
+    
+    return(data)
+  }
+
+#Apply the function to our dataframe
+  simulated_ptsd_total <- create_ptsd_diagnosis (simulated_ptsd_total)
+
+#Summarize
 simulated_ptsd_total %>%
   summarise(
     mean_total = mean(total),
@@ -95,42 +126,39 @@ hist(simulated_ptsd_total$total)
 Symptoms rated 2 or 3 will be considered as present. [not shown]
 
 ```{r PCL Binarizing, echo=FALSE, message=FALSE, warning=FALSE}
+#selecting only the "TRUE" Diagnosis
+simulated_ptsd_total_selected <- simulated_ptsd_total %>%
+  filter(PTSD_Diagnosis=="TRUE")
+
 ## set cut-off
 cut_off <- 1 #will be used with <= // 
 
 ##rename variables to "Q1-QN" for binarization
 n_cols <- ncol(simulated_ptsd_total)
-simulated_ptsd_rename <- simulated_ptsd_total %>%
+simulated_ptsd_selected_rename <- simulated_ptsd_total_selected %>%
   rename_with(~ paste0("Q", seq_len(n_cols - 2)), 1:(n_cols -2 ))
 
 ## Binarize
-data_binarized <- simulated_ptsd_rename
+data_binarized <- simulated_ptsd_selected_rename
 
 for (i in 1:(ncol(data_binarized)-2)){
   orig <- paste("q", i, sep = "")
   bin <- paste("Q", i, sep = "")
   data_binarized[orig] <- dplyr::case_when(data_binarized[bin]<= cut_off ~ 0, data_binarized[bin]>cut_off ~ 1)  #0 = "Symptom absent", 1 = "Symptom present"
-
 }
 
-#selecting only the "TRUE" Diagnosis
-data_binarized_diagnosed <- data_binarized %>%
-  filter(PTSD_Diagnosis=="TRUE")
-
 # Create new data frame
-data2 <- data_binarized_diagnosed %>% 
+data2 <- data_binarized %>% 
   select(PTSD_Diagnosis:ncol(data_binarized)) %>% 
   select(-PTSD_Diagnosis) %>% 
   tibble()
 
-
 ## Count frequency of profiles
-data2_counted <- plyr::count(data2[, ]) # 510
+data2_counted <- plyr::count(data2[, ]) 
 
 # Create sum score of endorsed symptoms
 data2_counted <- data2_counted %>% 
   mutate(total_bin = rowSums(data2_counted)-freq)
-
 
 ## Create datax 
 # Create full dataset
@@ -138,8 +166,7 @@ datax <- dplyr::left_join(data_binarized, data2_counted)
 
 
 ## Create dataframes for PsychPower Package 
-data_PTSD_PsychPower <- simulated_ptsd_total %>%  
-	filter(PTSD_Diagnosis=="TRUE") %>%
+data_PTSD_PsychPower <- simulated_ptsd_total_selected %>%  
   	select (symptom_1:symptom_20)
 #binarize
 data_binarized_PsychPower <- PsychPower::binarize(data_PTSD_PsychPower, cut_off = 1)
@@ -211,7 +238,48 @@ fig1 <- PsychPower::plot_pheno(data_frequency_PsychPower, frequency = "freq",
 fig1
 ```
 
-## 5. Session Info
+## 5. Theoretically possible combinations of binarized symptoms fulfilling diagnosis (without consideration of the total score criterion) and their frequency in real-world data
+```{r Theoretically possible combinations of binarized symptoms fulfilling diagnosis (without consideration of the total score criterion) and their frequency in real-world data, echo=FALSE, message=FALSE}
+ ## Create function
+create_possible_combinedwith_real_binarized_without_total <- function(data) {
+  # First rename the columns in the input data (real-world) to match the expected format
+  renamed_data <- data %>%
+    rename_with(~ paste0("symptom_", 1:20))
+  
+  # Generate new dataframe (all_combinations_binarized_without_total) with all possible combinations of symptom combination (binarized) without respecting the criteria of totalscore
+  symptom_cols_binarized_without_total <- paste0("symptom_", 1:20) # Total number of symptoms
+  symptom_values_binarized_without_total <- 0:1  # 0: absent, 1: present
+  all_combinations_binarized_without_total <- expand.grid(lapply(1:20, function(i) symptom_values_binarized_without_total))
+  colnames(all_combinations_binarized_without_total) <- symptom_cols_binarized_without_total
+  
+  # Define criteria for filtering
+  criteria_1 <- (
+    rowSums(all_combinations_binarized_without_total[, 1:5]) >= 1 &          # At least 1 symptom from 1-5
+      rowSums(all_combinations_binarized_without_total[, 6:7]) >= 1 &          # At least 1 symptom from 6-7
+      rowSums(all_combinations_binarized_without_total[, 8:14]) >= 2 &         # At least 2 symptoms from 8-14
+      rowSums(all_combinations_binarized_without_total[, 15:20]) >= 2          # At least 2 symptoms from 15-20
+  )
+  
+  # Filter combinations based on criteria
+  all_combinations_binarized_without_total_selectedPTSD <- filter(all_combinations_binarized_without_total, criteria_1=TRUE)
+  
+  # Count frequency of binarized profiles in real-world data
+  binarized_data_counted <- renamed_data %>%
+    group_by_all() %>%
+    summarise(freq = n(), .groups = 'drop')
+  
+  # Merge theoretically possible combinations with their frequency in real-world data
+  merged_binarized_possible_real_without_total <- left_join(all_combinations_binarized_without_total_selectedPTSD, binarized_data_counted, by = symptom_cols_binarized_without_total)
+  merged_binarized_possible_real_without_total$freq <- coalesce(merged_binarized_possible_real_without_total$freq, 0)
+ 
+   return(merged_binarized_possible_real_without_total)
+  }
+  ## Applying function to our data
+possible_combinedwith_real_binarized_without_total <- create_possible_combinedwith_real_binarized_without_total(data2)
+
+```
+
+## x. Session Info
 
 ```{r Session Info, echo=FALSE, message=FALSE}
 sessionInfo()
