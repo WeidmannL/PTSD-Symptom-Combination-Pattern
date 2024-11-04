@@ -238,9 +238,10 @@ fig1 <- PsychPower::plot_pheno(data_frequency_PsychPower, frequency = "freq",
 fig1
 ```
 
-## 5. Theoretically possible combinations of binarized symptoms fulfilling diagnosis (without consideration of the total score criterion) and their frequency in real-world data
+## 5. Analysis of the possible combinations of binarized symptoms that fulfill the diagnosis (without consideration of the total score criterion)
+#### 5.1. Theoretically possible combinations of binarized symptoms fulfilling diagnosis (without consideration of the total score criterion) and their frequency in real-world data
 ```{r Theoretically possible combinations of binarized symptoms fulfilling diagnosis (without consideration of the total score criterion) and their frequency in real-world data, echo=FALSE, message=FALSE}
- ## Create function
+ ### Create function
   # Input-data: real-world dataset fulfilling diagnostic criteria, 20 columns with binarized symptoms
 create_possible_combinedwith_real_binarized_without_total <- function(data) {
   # First rename the columns in the input data (real-world) to match the expected format
@@ -262,7 +263,7 @@ create_possible_combinedwith_real_binarized_without_total <- function(data) {
   )
   
   # Filter combinations based on criteria
-  all_combinations_binarized_without_total_selectedPTSD <- filter(all_combinations_binarized_without_total, criteria_1=TRUE)
+  all_combinations_binarized_without_total_selectedPTSD <- filter(all_combinations_binarized_without_total, criteria_1==TRUE)
   
   # Count frequency of binarized profiles in real-world data
   binarized_data_counted <- renamed_data %>%
@@ -276,10 +277,12 @@ create_possible_combinedwith_real_binarized_without_total <- function(data) {
    return(merged_binarized_possible_real_without_total)
   }
   
-  ## Applying function to our data
+  ### Applying function to our data
 possible_combinedwith_real_binarized_without_total <- create_possible_combinedwith_real_binarized_without_total(data2)
-
-## Create function for describing the resulting dataframe
+```
+#### 5.2 Description of the theoretically possible and actually occurring symptom combinations fulfilling diagnosis (without consideration of the total score criterion)
+```{r  Description of the theoretically possible and actually occurring symptom combinations fulfilling diagnosis (without consideration of the total score criterion), echo=FALSE, message=FALSE}
+  ### Create function for describing the resulting dataframe
   # Input data frame: resulting data frame of the function “create_possible_combinedwith_real_binarized_without_total”, i.e.: 21 columns (20 symptoms and one “freq” column). The symptoms are each binarized. As rows all theoretically possible combinations that fulfill the diagnostic criteria. The last column “freq” contains the number of presentations of this symptom combination in the real-world data.
 description_merged_binarized_possible_real_without_total <- function(data){
   # Filter for only combinations that have actually occurred
@@ -287,6 +290,8 @@ description_merged_binarized_possible_real_without_total <- function(data){
     filter(freq > 0)
   
   ## Description of theoretically and actually occurring combinations
+  # How many individuals were diagnosed
+  n_pat_diagnosed <- sum(data$freq)
   # How many combinations exist theoretically
   n_possible_combinations <- nrow(data)
   # How many combinations are represented in real-world data
@@ -296,6 +301,7 @@ description_merged_binarized_possible_real_without_total <- function(data){
   
   # Display of some results in a matrix
   matrix_data1 <- c(
+    n_pat_diagnosed,
     n_possible_combinations, 
     n_real_combinations, 
     percentage_real_possible,
@@ -303,8 +309,10 @@ description_merged_binarized_possible_real_without_total <- function(data){
     stats::median(data$freq),
     stats::median(real_combinations$freq))
   
-  description_matrix1 <- matrix(matrix_data1, ncol = 1, nrow = 6)
-  rownames(description_matrix1) <- c("Number of theoretically possible combinations ", "Number of combinations that actually occur", 
+  description_matrix1 <- matrix(matrix_data1, ncol = 1, nrow = 7)
+  rownames(description_matrix1) <- c("Number of individuals fulfilling the diagnosis", 
+				     "Number of theoretically possible combinations ", 
+				     "Number of combinations that actually occur", 
                                      "Percentage of possible combinations that actually occur", 
                                      "How often the most common combination actually occurs",
                                      "Median frequency in relation to theoretically possible combinations",
@@ -317,7 +325,7 @@ description_merged_binarized_possible_real_without_total <- function(data){
     dplyr::slice_head(n = 10)
   
   # Profiles (N, %) reported by less or equal than in 1% of the individuals only respecting combinations that actually occur
-  one_percent_individuals = round(nrow(data2)*0.01, 0)
+  one_percent_individuals = round(n_pat_diagnosed*0.01, 0)
   N_Profiles <- real_combinations %>% filter(freq<=one_percent_individuals) %>% nrow()
   Percentage_Profiles <- round((N_Profiles / nrow(real_combinations))*100, 3)
   
@@ -328,7 +336,7 @@ description_merged_binarized_possible_real_without_total <- function(data){
     summarise(sum(freq)) %>%
     pull()
   
-  # Number of individuals reporting NOT one of the ten most common combinations only respecting combinations that actually occur
+  # Number of individuals reporting NOT one of the ten most common combinations
   N_individuals_not_ten_most_common <- real_combinations %>%
     arrange(desc(freq)) %>%
     slice_tail(n = -10) %>% 
@@ -343,7 +351,7 @@ description_merged_binarized_possible_real_without_total <- function(data){
     summarise(sum(freq)) %>%
     pull()
   
-  # Number of individuals reporting one of the 50% least common combinations only respecting combinations that actually occur
+  # Number of individuals reporting one of the 50% least common combinations
   fifty_percent_combinations <- round(nrow(real_combinations)*0.5, 0)
   N_individuals_fifty_perc_least_common <- real_combinations %>%
     arrange(desc(freq)) %>%
@@ -364,13 +372,14 @@ description_merged_binarized_possible_real_without_total <- function(data){
   rownames(description_matrix2) <- c("Number of Profiles reported by less or equal than in 1% of the individuals only respecting combinations that actually occur", 
                                      "Percentage of Profiles reported by less or equal than in 1% of the individuals only respecting combinations that actually occur", 
                                      "Number of individuals reporting one of the ten most common combinations", 
-                                     "Number of individuals reporting NOT one of the ten most common combinations only respecting combinations that actually occur",
+                                     "Number of individuals reporting NOT one of the ten most common combinations",
                                      "Number of individuals reporting 1% most common combinations",
-                                     "Number of individuals reporting one of the 50% least common combinations only respecting combinations that actually occur")
+                                     "Number of individuals reporting one of the 50% least common combinations")
   description_matrix2[2,1] <- sprintf("%.2f%%", Percentage_Profiles)
   
   ## Description of single symptoms
-  n_symptoms <- ncol(data2)
+  symptom_cols <- setdiff(colnames(data), "freq")
+  n_symptoms <- length(symptom_cols)
   symp_prevalence_comb <- numeric(n_symptoms)
   symp_absolute_comb <- numeric(n_symptoms)
   symp_prevalence_pat <- numeric(n_symptoms)
@@ -379,8 +388,8 @@ description_merged_binarized_possible_real_without_total <- function(data){
   for (i in 1:n_symptoms) {
     symp_absolute_comb[i] <- sum(real_combinations[,i] == 1)   # Absolute prevalence of a symptom in different actually occurring combinations
     symp_prevalence_comb[i] <- (symp_absolute_comb[i]/nrow(real_combinations)) * 100 # Percentage prevalence of a symptom in different actually occurring combinations
-    symp_absolute_pat[i] <- sum(data2[,i] == 1) # Absolute prevalence of a symptom in patients
-    symp_prevalence_pat[i] <- (symp_absolute_pat[i]/nrow(data2)) * 100 # Percentage prevalence of a symptom in patients
+    symp_absolute_pat[i] <- sum((real_combinations[,i] == 1)* real_combinations$freq) # Absolute prevalence of a symptom in patients
+    symp_prevalence_pat[i] <- (symp_absolute_pat[i]/n_pat_diagnosed) * 100 # Percentage prevalence of a symptom in patients
   }
   
   # Display of some results in a matrix
@@ -392,7 +401,7 @@ description_merged_binarized_possible_real_without_total <- function(data){
   )
   
   description_matrix3 <- matrix(matrix_data3, ncol = 4, byrow = FALSE)
-  rownames(description_matrix3) <- colnames(data2)      
+  rownames(description_matrix3) <- colnames(data) [1:(ncol(data)-1)]     
   colnames(description_matrix3) <- c("Number of combinations actually occurring that include this symptom", 
                                      "Percentage of combinations actually occurring that include this symptom",
                                      "Number of patients in the data set showing this symptom",
@@ -407,10 +416,231 @@ description_merged_binarized_possible_real_without_total <- function(data){
   )
 }
 
-   ## Applying function to our data
+   ### Applying function to our data
 description_merged_binarized_possible_real_without_total(possible_combinedwith_real_binarized_without_total)
 ```
+#### 5.3. Determine the change resulting from the omission of one or more symptoms
+##### 5.3.1. Function for neglecting one or more symptoms and then theoretically possible combinations of binarized symptoms fulfilling diagnosis (without considering the total score criterion) and their frequency in real-world data
+```{r  Neglecting one or more symptoms and then theoretically possible combinations of binarized symptoms fulfilling diagnosis (without considering the total score criterion) and their frequency in real-world data, echo=FALSE, message=FALSE}
+  ### Create function for deleting one or more symptoms. Then theoretically possible combinations of binarized symptoms fulfilling diagnosis (without consideration of the total score criterion) and their frequencies in real-world data
+  # Input: data: real-world dataset fulfilling diagnostic criteria, 20 columns with binarized symptoms, symptoms_to_delete: number of the symptom(s) you want to delete
+create_possible_combined_with_real_binarized_without_total_symp_del <- function(data, symptoms_to_delete) {
+  # Convert single number to vector if necessary
+  if(!is.vector(symptoms_to_delete)) {
+    symptoms_to_delete <- c(symptoms_to_delete)
+  }
+  
+  # Checks input
+  if (!all(sapply(symptoms_to_delete, is.numeric)) || 
+      any(symptoms_to_delete < 1) || 
+      any(symptoms_to_delete > 20) ||
+      length(unique(symptoms_to_delete)) != length(symptoms_to_delete)) {
+    stop("symptoms_to_delete must be unique numbers between 1 and 20")
+  }
+  
+  # Create vector of all symptom numbers excluding the ones to delete
+  remaining_symptoms <- setdiff(1:20, symptoms_to_delete)
+  
+  # Ensure we have enough symptoms left for the criteria
+  if(length(remaining_symptoms) < 6) {
+    stop("Cannot delete that many symptoms - need enough symptoms to maintain criteria requirements")
+  }
+  
+  # Create new column names excluding the deleted symptoms
+  symptom_cols_binarized_without_total <- paste0("symptom_", remaining_symptoms)
+  
+  ## Rename the columns in the input data and remove deleted symptoms
+  renamed_data <- data %>%
+    rename_with(~ paste0("symptom_", 1:20)) %>%
+    select(-paste0("symptom_", symptoms_to_delete))  # Remove the deleted symptoms
+  
+  # Generate new dataframe with all possible combinations
+  symptom_values_binarized_without_total <- 0:1  # 0: absent, 1: present
+  all_combinations_binarized_without_total <- expand.grid(
+    lapply(1:length(remaining_symptoms), function(i) symptom_values_binarized_without_total)
+  )
+  colnames(all_combinations_binarized_without_total) <- symptom_cols_binarized_without_total
+  
+  # Helper function to count symptoms in a range excluding deleted symptoms
+  count_in_range <- function(df, start, end) {
+    range_symptoms <- intersect(remaining_symptoms, start:end) # Which remaining_symptoms fall in the range
+    if(length(range_symptoms) > 0) {
+      cols <- paste0("symptom_", range_symptoms)
+      return(rowSums(df[, cols, drop = FALSE]))
+    }
+    return(0)
+  }
+  
+  # Helper function to calculate required symptoms based on remaining symptoms in range 
+  #(original_required: how many symptoms in this range must be fulfilled in the original criteria?)
+  get_required_symptoms <- function(start, end, original_required) {
+    range_symptoms <- intersect(remaining_symptoms, start:end)
+    # Adjust required symptoms proportionally, rounding up
+    new_required <- ceiling(original_required * length(range_symptoms) / length(start:end))
+    return(new_required)
+  }
+  
+  # Calculate adjusted requirements based on remaining symptoms
+  req_1_5 <- get_required_symptoms(1, 5, 1)
+  req_6_7 <- get_required_symptoms(6, 7, 1)
+  req_8_14 <- get_required_symptoms(8, 14, 2)
+  req_15_20 <- get_required_symptoms(15, 20, 2)
+  
+  # Define criteria for filtering with adjusted ranges and requirements
+  criteria_1 <- (
+    count_in_range(all_combinations_binarized_without_total, 1, 5) >= req_1_5 &
+      count_in_range(all_combinations_binarized_without_total, 6, 7) >= req_6_7 &
+      count_in_range(all_combinations_binarized_without_total, 8, 14) >= req_8_14 &
+      count_in_range(all_combinations_binarized_without_total, 15, 20) >= req_15_20
+  )
+  
+  # Filter combinations based on criteria
+  all_combinations_binarized_without_total_selectedPTSD <- filter(
+    all_combinations_binarized_without_total, 
+    criteria_1 == TRUE
+  )
+  
+  # Count frequency of binarized profiles in real-world data
+  binarized_data_counted <- renamed_data %>%
+    group_by_all() %>%
+    summarise(freq = n(), .groups = 'drop')
+  
+  # Merge theoretically possible combinations with their frequency in real-world data
+  merged_binarized_possible_real_without_total <- left_join(
+    all_combinations_binarized_without_total_selectedPTSD, 
+    binarized_data_counted, 
+    by = symptom_cols_binarized_without_total
+  )
+  merged_binarized_possible_real_without_total$freq <- coalesce(
+    merged_binarized_possible_real_without_total$freq, 
+    0
+  )
+  
+  return(merged_binarized_possible_real_without_total)
+}
+```
+##### 5.3.2. Function for describing the resulting data frame with one or more deleted symptoms and for comparing this data set with the data set that takes all symptoms into account. 
+```{r Function for describing the resulting data frame with one or more deleted symptoms and for comparing this data set with the data set that takes all symptoms into account., echo=FALSE, message=FALSE}
+  ### Create function for describing the resulting data frame with one or more deleted symptoms and for comparing this data set with the data set that takes all symptoms into account. 
+  # Input data frames: resulting data frames of 1. the function “create_possible_combinedwith_real_binarized_without_total” and 2. "create_possible_combinedwith_real_binarized_without_total_symp_del". The first data set comprises 21 columns (20 symptoms and one column “freq”). The second minus the deleted symptoms. The symptoms are each binarized. The rows are all theoretically possible combinations that fulfill the diagnostic criteria. The last column “freq” contains the number of presentations of this symptom combination in the real data.
+description_and_comparison_symp_del_merged_binarized_possible_real_without_total <- function(data_all_symptoms, data_deleted_symptoms) {
+  # Get description of both datasets using the original function
+  desc_all <- description_merged_binarized_possible_real_without_total(data_all_symptoms)
+  desc_deleted <- description_merged_binarized_possible_real_without_total(data_deleted_symptoms)
+  
+  # Helper function to safely convert percentage strings to numeric
+  safe_percent_convert <- function(x) {
+    if(is.character(x)) {
+      as.numeric(gsub("[^0-9.-]", "", x))
+    } else {
+      as.numeric(x)
+    }
+  }
+  
+  ## Create comparison matrices
+  # Matrix 1 comparison - Basic statistics
+  comparison_matrix1 <- matrix(
+    c(desc_all$Matrix1[,1], desc_deleted$Matrix1[,1], 
+      mapply(function(all_val, del_val) {
+        if(grepl("%", all_val)) {
+          sprintf("%.2f%%", safe_percent_convert(del_val) - safe_percent_convert(all_val))
+        } else {
+          as.numeric(del_val) - as.numeric(all_val)
+        }
+      }, desc_all$Matrix1[,1], desc_deleted$Matrix1[,1])),
+    ncol = 3
+  )
+  rownames(comparison_matrix1) <- rownames(desc_all$Matrix1)
+  colnames(comparison_matrix1) <- c("All Symptoms", "Deleted Symptoms", "Difference")
+  
+  # Matrix 2 comparison - Statistic on the combinations
+  comparison_matrix2 <- matrix(
+    c(desc_all$Matrix2[,1], desc_deleted$Matrix2[,1],
+      mapply(function(all_val, del_val) {
+        if(grepl("%", all_val)) {
+          sprintf("%.2f%%", safe_percent_convert(del_val) - safe_percent_convert(all_val))
+        } else {
+          as.numeric(del_val) - as.numeric(all_val)
+        }
+      }, desc_all$Matrix2[,1], desc_deleted$Matrix2[,1])),
+    ncol = 3
+  )
+  rownames(comparison_matrix2) <- rownames(desc_all$Matrix2)
+  colnames(comparison_matrix2) <- c("All Symptoms", "Deleted Symptoms", "Difference")
+  
+  # Matrix 3 comparison
+  common_symptoms <- intersect(
+    rownames(desc_all$Matrix3),
+    rownames(desc_deleted$Matrix3)
+  )
+  
+  comparison_matrix3 <- matrix(
+    nrow = length(common_symptoms),
+    ncol = 12
+  )
+  rownames(comparison_matrix3) <- common_symptoms
+  colnames(comparison_matrix3) <- c(
+    "N combinations actually occurring that include this symptom (All)", 
+    "N combinations actually occurring that include this symptom(Deleted)", 
+    "N combinations actually occurring that include this symptom Difference",
+    "% combinations actually occurring that include this symptom (All)", 
+    "% combinations actually occurring that include this symptom (Deleted)", 
+    "% combinations actually occurring that include this symptom Difference",
+    "N patients in the data set showing this symptom (All)", 
+    "N patients in the data set showing this symptom (Deleted)",
+    "N patients in the data set showing this symptom Difference",
+    "% patients in the data set showing this symptom (All)",
+    "% patients in the data set showing this symptom (Deleted)",
+    "% patients in the data set showing this symptom Difference"
+  )
+  
+  for(symptom in common_symptoms) {
+    row_all <- desc_all$Matrix3[symptom,]
+    row_deleted <- desc_deleted$Matrix3[symptom,]
+    
+    # Convert values safely
+    values <- c(
+      safe_percent_convert(row_all[1]), 
+      safe_percent_convert(row_deleted[1]),
+      safe_percent_convert(row_deleted[1]) - safe_percent_convert(row_all[1]),
+      safe_percent_convert(row_all[2]),
+      safe_percent_convert(row_deleted[2]),
+      safe_percent_convert(row_deleted[2]) - safe_percent_convert(row_all[2]),
+      safe_percent_convert(row_all[3]), 
+      safe_percent_convert(row_deleted[3]),
+      safe_percent_convert(row_deleted[3]) - safe_percent_convert(row_all[3]),
+      safe_percent_convert(row_all[4]),
+      safe_percent_convert(row_deleted[4]),
+      safe_percent_convert(row_deleted[4]) - safe_percent_convert(row_all[4])
+    )
+    
+    comparison_matrix3[symptom,] <- values
+  }
+  
+  # Format percentages in matrices (only for percentage columns)
+  percent_cols <- c(4,5,6,10,11,12)
+  for(col in percent_cols) {
+    comparison_matrix3[,col] <- sprintf("%.2f%%", as.numeric(comparison_matrix3[,col]))
+  }
+  
+  ## Return all results in a list
+  list(
+    "Comparison_Matrix1" = comparison_matrix1,
+    "Comparison_Matrix2" = comparison_matrix2,
+    "Comparison_Matrix3" = comparison_matrix3
+  )
+}
 
+```
+##### 5.3.3. Application of the generated functions  
+###### 5.3.3.1. Deletion of symptom 1
+```{r Deletion of symptom 3, echo=FALSE, message=FALSE}
+  ## Applying function “create_possible_combinedwith_real_binarized_without_total_symp_del“
+possible_combinedwith_real_binarized_without_total_symp_del_1 <- create_possible_combined_with_real_binarized_without_total_symp_del(data2, 1)
+
+  ## Applying function “description_and_comparison_symp_del_merged_binarized_possible_real_without_total“
+description_and_comparison_symp_del_merged_binarized_possible_real_without_total(possible_combinedwith_real_binarized_without_total, possible_combinedwith_real_binarized_without_total_symp_del_1)
+```
 ## 6. Theoretically possible combinations of nonbinarized symptoms fulfilling diagnosis and their frequency in real-world data
 ```{r Theoretically possible combinations of nonbinarized symptoms fulfilling diagnosis and their frequency in real-world data, echo=FALSE, message=FALSE}
 # ### DOES NOT WORK, BECAUSE MEMORY LIMIT IS REACHED, I am searching for alternative options (the use of chunks to handle the memory limit does not work either)
