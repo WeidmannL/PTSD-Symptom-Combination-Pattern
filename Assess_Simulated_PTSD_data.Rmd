@@ -317,7 +317,7 @@ description_merged_binarized_possible_real_without_total <- function(data){
                                      "How often the most common combination actually occurs",
                                      "Median frequency in relation to theoretically possible combinations",
                                      "Median frequency in relation to combinations actually occurring")
-  description_matrix1[3,1] <- sprintf("%.2f%%", percentage_real_possible)
+  description_matrix1[4,1] <- sprintf("%.2f%%", percentage_real_possible)
   
   # 10 most common combinations
   ten_most_common_real <- real_combinations %>% 
@@ -475,6 +475,10 @@ create_possible_combined_with_real_binarized_without_total_symp_del <- function(
   #(original_required: how many symptoms in this range must be fulfilled in the original criteria?)
   get_required_symptoms <- function(start, end, original_required) {
     range_symptoms <- intersect(remaining_symptoms, start:end)
+    if(length(range_symptoms) == 0) {
+      stop(sprintf("Cannot delete all symptoms from range %d-%d as at least %d symptom(s) from this range are required for diagnosis", 
+                  start, end, original_required))
+    }
     # Adjust required symptoms proportionally, rounding up
     new_required <- ceiling(original_required * length(range_symptoms) / length(start:end))
     return(new_required)
@@ -569,16 +573,13 @@ description_and_comparison_symp_del_merged_binarized_possible_real_without_total
   colnames(comparison_matrix2) <- c("All Symptoms", "Deleted Symptoms", "Difference")
   
   # Matrix 3 comparison
-  common_symptoms <- intersect(
-    rownames(desc_all$Matrix3),
-    rownames(desc_deleted$Matrix3)
-  )
+  all_symptoms <- rownames(desc_all$Matrix3)
   
   comparison_matrix3 <- matrix(
-    nrow = length(common_symptoms),
+    nrow = length(all_symptoms),
     ncol = 12
   )
-  rownames(comparison_matrix3) <- common_symptoms
+  rownames(comparison_matrix3) <- all_symptoms
   colnames(comparison_matrix3) <- c(
     "N combinations actually occurring that include this symptom (All)", 
     "N combinations actually occurring that include this symptom(Deleted)", 
@@ -594,10 +595,13 @@ description_and_comparison_symp_del_merged_binarized_possible_real_without_total
     "% patients in the data set showing this symptom Difference"
   )
   
-  for(symptom in common_symptoms) {
+  for(symptom in all_symptoms) {
     row_all <- desc_all$Matrix3[symptom,]
-    row_deleted <- desc_deleted$Matrix3[symptom,]
     
+      # Check if symptom exists in deleted dataset
+    if(symptom %in% rownames(desc_deleted$Matrix3)) {
+      row_deleted <- desc_deleted$Matrix3[symptom,]
+
     # Convert values safely
     values <- c(
       safe_percent_convert(row_all[1]), 
@@ -613,14 +617,32 @@ description_and_comparison_symp_del_merged_binarized_possible_real_without_total
       safe_percent_convert(row_deleted[4]),
       safe_percent_convert(row_deleted[4]) - safe_percent_convert(row_all[4])
     )
+    } else {
+      # For deleted symptoms, show original values and "DELETED" for deleted dataset, "NA" for difference
+      values <- c(
+        safe_percent_convert(row_all[1]), 
+        "DELETED",
+        "NA",
+        safe_percent_convert(row_all[2]),
+        "DELETED",
+        "NA",
+        safe_percent_convert(row_all[3]), 
+        "DELETED",
+        "NA",
+        safe_percent_convert(row_all[4]),
+        "DELETED",
+        "NA"
+      )
+    }
     
     comparison_matrix3[symptom,] <- values
   }
   
-  # Format percentages in matrices (only for percentage columns)
+  # Format percentages in matrices (only for percentage columns and for non-deleted symptoms)
   percent_cols <- c(4,5,6,10,11,12)
   for(col in percent_cols) {
-    comparison_matrix3[,col] <- sprintf("%.2f%%", as.numeric(comparison_matrix3[,col]))
+    numeric_rows <- !comparison_matrix3[,col] %in% c("DELETED", "NA")
+    comparison_matrix3[numeric_rows,col] <- sprintf("%.2f%%", as.numeric(comparison_matrix3[numeric_rows,col]))
   }
   
   ## Return all results in a list
