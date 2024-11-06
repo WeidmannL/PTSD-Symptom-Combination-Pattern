@@ -708,6 +708,330 @@ description_and_comparison_symp_del_merged_binarized_possible_real_without_total
 #   possible_combinedwith_real_nonbinarized <- create_possible_combinedwith_real_nonbinarized(simulated_ptsd_total_selected)
 
 ```
+## 7. Symptomanalysis, conditional probabilities, pairwise consideration, symptomgroup analysis
+```{r Symptomanalysis, conditional probabilities, pairwise consideration, symptomgroup analysis, echo=FALSE, message=FALSE}
+  ### Create function for Analysis of individual symptom frequencies, conditional probabilities, pairwise considerations, chi-square tests, symptom groups analysis
+  # Input data frames: 20 columns with non-binarized symptoms, all patients included before application of diagnostic criteria
+analyze_symptoms_condprob_pairs <- function(data) {
+  ## Preparation of inputdata
+  # Input validation
+  if (!is.data.frame(data) || ncol(data) < 20) {
+    stop("Input must be a data frame with at least 20 symptom columns")
+  }
+  
+   # Function to binarize symptom scores with cutoff of 1 in orginial dataframe
+  binarize_symptoms <- function(data, cutoff = 1) {
+    result <- as.data.frame(lapply(data, function(x) {
+      as.numeric(x > cutoff)
+    }))
+    return(result)
+  }
+  # Apply to our data
+  binarized_all <- binarize_symptoms(data)
+  
+  # Function to check if diagnostic criteria are met for binarized data (without consideration of totalscore)
+  check_diagnosis <- function(data) {
+    criteria1 <- rowSums(data[, 1:5] > 0) >= 1     # At least 1 from 1-5
+    criteria2 <- rowSums(data[, 6:7] > 0) >= 1     # At least 1 from 6-7
+    criteria3 <- rowSums(data[, 8:14] > 0) >= 2    # At least 2 from 8-14
+    criteria4 <- rowSums(data[, 15:20] > 0) >= 2   # At least 2 from 15-20
+    
+    criteria1 & criteria2 & criteria3 & criteria4
+  }
+  # Add diagnosis column
+  binarized_all$PTSD_Diagnosis <- check_diagnosis(binarized_all)
+  
+  ## Create list to store results
+  results <- list()
+  
+  ## 1. Individual symptom frequencies
+  results$symptom_frequencies <- list(
+  # 1.1 Overall frequencies
+    freq_overall = colMeans(binarized_all[, 1:20]),
+  # 1.2 Frequencies in diagnosed patients
+    freq_diagnosed = colMeans(binarized_all[binarized_all$PTSD_Diagnosis == TRUE, 1:20]),
+  # 1.3 Frequencies in non-diagnosed patients
+    freq_nondiagnosed = colMeans(binarized_all[binarized_all$PTSD_Diagnosis == FALSE, 1:20])
+  )
+  
+  ## 2. Conditional probabilities
+  # 2.1 P(Diagnosis | Symptom present)
+  results$conditional_probs <- lapply(1:20, function(i) {
+      prob_diag_if_present = sum(binarized_all$PTSD_Diagnosis == TRUE & binarized_all[,i] == 1) / max(sum(binarized_all[,i] == 1), 1)
+  # 2.2 P(Diagnosis | Symptom absent)
+      prob_diag_if_absent <- sum(binarized_all$PTSD_Diagnosis == FALSE & binarized_all[,i] == 0) /  max(sum(binarized_all[,i] == 0), 1)
+  # 2.3 Relative risk
+      relative_risk <- if(prob_diag_if_absent > 0) {
+        prob_diag_if_present / prob_diag_if_absent
+      } else {
+        NA
+      }
+      list(
+        prob_diag_if_present = prob_diag_if_present,
+        prob_diag_if_absent = prob_diag_if_absent,
+        relative_risk = relative_risk
+      )
+  })
+  
+  ## 3. Pairwise considerations
+  results$correlations <- list(
+  # 3.1 Overall correlation matrix
+    overall_cor = cor(binarized_all[, 1:20]),
+  # 3.2 Correlation matrix for diagnosed patients
+    diagnosed_cor = cor(binarized_all[binarized_all$PTSD_Diagnosis == TRUE, 1:20])
+  )
+  # 3.3.-3.6. 
+  n <- 20
+  # 3.3. Observed joint probabilities overall and for diagnosed patients
+  joint_prob_overall <- matrix(0, n, n)
+  joint_prob_diagnosed <- matrix(0, n, n)
+  
+  for(i in 1:n) {
+    for(j in 1:n) {
+      joint_prob_overall[i,j] <- mean(binarized_all[,i] & binarized_all[,j])
+      joint_prob_diagnosed[i,j] <- mean(binarized_all[binarized_all$PTSD_Diagnosis == TRUE,i] & binarized_all[binarized_all$PTSD_Diagnosis == TRUE,j])
+    }
+  }
+ 
+  # 3.4. Expected under independence overall and for diagnosed patients
+  expected_prob_overall <- outer(results$symptom_frequencies$freq_overall, results$symptom_frequencies$freq_overall)
+  expected_prob_diagnosed <- outer(results$symptom_frequencies$freq_diagnosed, results$symptom_frequencies$freq_diagnosed)
+ 
+  # 3.5. Ratio observed and expected overall
+  ratio_overall <- ifelse(expected_prob_overall > 0, joint_prob_overall/expected_prob_overall, NA)
+  # 3.6. Comparison observed and expected for diagnosed patients
+  ratio_diagnosed <- ifelse(expected_prob_diagnosed > 0, joint_prob_diagnosed/expected_prob_diagnosed, NA)
+  # 3.7. Difference observed vs expected overall
+  diff_prob_overall <- joint_prob_overall - expected_prob_overall
+  # 3.8. Difference observed vs expected for diagnosed patients
+  diff_prob_diagnosed <- joint_prob_diagnosed -  expected_prob_diagnosed
+  
+  # Store 3.3 -3.8. in a list
+  results$symptom_relationships <- list(
+    observed = list(
+      overall = joint_prob_overall,
+      diagnosed = joint_prob_diagnosed
+    ),
+    expected = list(
+      overall = expected_prob_overall,
+      diagnosed = expected_prob_diagnosed
+    ),
+    ratios = list(
+      overall = ratio_overall,
+      diagnosed = ratio_diagnosed
+    ),
+   differences = list(
+      overall = diff_prob_overall,
+      diagnosed = diff_prob_diagnosed
+    )
+  )
+ 
+  ## 4. Symptom groups analysis
+  # 4.1 Probability of diagnosis when group criteria are met
+  group_criteria <- list(
+    group1 = rowSums(binarized_all[,1:5]) >= 1,
+    group2 = rowSums(binarized_all[,6:7]) >= 1,
+    group3 = rowSums(binarized_all[,8:14]) >= 2,
+    group4 = rowSums(binarized_all[,15:20]) >= 2
+  )
+  
+  results$group_prob_diagnosis <- lapply(group_criteria, function(criteria) {
+    sum(binarized_all$PTSD_Diagnosis == TRUE & criteria) / sum(criteria)
+  })
+  return(results)
+}
+
+  ### Applying function to our data
+symptomanalysis_condprob_pairs <- analyze_symptoms_condprob_pairs(simulated_ptsd_data)
+```
+## 8. Calculation of the probability of different symptom combinations with binarized symptoms that meet the diagnostic criteria using different models
+```{r Calculation of the probability of different symptom combinations with binarized symptoms that meet the diagnostic criteria using different models, echo=FALSE, message=FALSE}
+#   ### PROBABLY NOT POSSIBLE, AS THERE IS TOO MUCH DATA; NOT EVEN WHEN PERFORMING ONE METHOD INDIVIDUALLY EXCEPT FOR THE INDEPENDENCE METHOD
+#  # Required packages
+# library(copula)
+# library(mvtnorm)
+# library(glmnet)
+# library(IsingSampler)
+# 
+# ### Creation of a function to calculate the probability of different combinations of symptoms with binarized symptoms meeting the diagnostic criteria using different models (Independence Method, Observed Frequencies, Gaussian Copula, Multivariate Normal, Log-linear Model, Ising Model)
+# # Input: 20 columns with non-binarized symptoms, all patients included before application of diagnostic criteria
+# calculate_sympcombprob <- function(raw_data) {
+#   # Helper function to binarize symptoms
+#   binarize_symptoms <- function(data, cutoff = 1) {
+#     result <- as.data.frame(lapply(data, function(x) {
+#       as.numeric(x > cutoff)
+#     }))
+#     return(result)
+#   }
+#   
+#   ## Step 1: Binarize the input data
+#   binarized_all <- binarize_symptoms(raw_data)
+#   
+#   ## Step 2: Apply criteria to create valid_binarized_all
+#   criteria_met_data <- (
+#     rowSums(binarized_all[, 1:5]) >= 1 &      # At least 1 symptom from 1-5
+#       rowSums(binarized_all[, 6:7]) >= 1 &      # At least 1 symptom from 6-7
+#       rowSums(binarized_all[, 8:14]) >= 2 &     # At least 2 symptoms from 8-14
+#       rowSums(binarized_all[, 15:20]) >= 2      # At least 2 symptoms from 15-20
+#   )
+#   
+#   # Filter binarized data based on criteria
+#   valid_binarized_all <- binarized_all[criteria_met_data, ]
+#   
+#   ## Step 3: Calculate covariance matrix from binarized data (overall)
+#   covariance_matrix <- cov(valid_binarized_all)
+#   
+#   ## Step 4: Calculate symptom frequencies (overall)
+#   symptom_frequencies <- colMeans(valid_binarized_all)
+#   
+#   ## Step 5: Generate all possible symptom combinations
+#   symptom_cols <- paste0("symptom_", 1:20)
+#   symptom_values <- 0:1
+#   all_combinations <- expand.grid(lapply(1:20, function(i) symptom_values))
+#   colnames(all_combinations) <- symptom_cols
+#   
+#   ## Step 6: Apply criteria
+#   criteria_met <- (
+#     rowSums(all_combinations[, 1:5]) >= 1 &      # At least 1 symptom from 1-5
+#       rowSums(all_combinations[, 6:7]) >= 1 &      # At least 1 symptom from 6-7
+#       rowSums(all_combinations[, 8:14]) >= 2 &     # At least 2 symptoms from 8-14
+#       rowSums(all_combinations[, 15:20]) >= 2      # At least 2 symptoms from 15-20
+#   )
+#   
+#   # Filter combinations based on criteria
+#   valid_combinations <- all_combinations[criteria_met, ]
+#   
+#   ## Step 7: Calculate probabilities for valid combinations with different methods
+#   # 7.1. Method 1: Independence Method
+#   independence_prob <- function(combination) { #combination = single row
+#     prob <- 1
+#     for(i in 1:length(combination)) { #for each position in this combination
+#       if(combination[i] == 1) {
+#         prob <- prob * symptom_frequencies[i]
+#       } else {
+#         prob <- prob * (1 - symptom_frequencies[i])
+#       }
+#     }
+#     return(prob)
+#   }
+#   valid_combinations$prob_independence <- apply(valid_combinations, 1, independence_prob)
+# 
+# 
+#   # 7.2. Method 2: Observed Frequencies
+#   observed_combinations <- apply(valid_binarized_all, 1, paste, collapse = "") #each row into a single string
+#   get_observed_freq <- function(combination) {
+#     pattern <- paste(combination, collapse = "") #convert combination to a string pattern
+#     freq <- sum(observed_combinations == pattern) / length(observed_combinations) #how many times this exact pattern appears, divide by total number of observations
+#     return(max(freq, 1e-10)) # Add small constant to avoid zero probabilities
+#   }
+#   valid_combinations$prob_observed <- apply(valid_combinations, 1, get_observed_freq)
+# 
+#   # 7.3. Method 3: Gaussian Copula
+#   gaussian_copula_prob <- function(combination, covariance_matrix) {
+#     # Create normal copula object
+#     normal_copula <- normalCopula(param = P2p(covariance_matrix),
+#                                   dim = ncol(covariance_matrix),
+#                                   dispstr = "un")
+# 
+#     # Convert binary values to uniform margins
+#     u <- ifelse(as.numeric(combination) == 1, 0.999, 0.001)  # Avoid exact 0s and 1s
+# 
+#     # Calculate probability using copula
+#     prob <- pCopula(u, normal_copula)
+#     return(max(prob, 1e-10))
+#   }
+# 
+#   valid_combinations$prob_copula <- apply(valid_combinations, 1,
+#                                           function(x) gaussian_copula_prob(x, covariance_matrix))
+# 
+#   # 7.4. Method 4: Multivariate Normal
+#   # Convert covariance matrix to correlation matrix
+#   correlation_matrix <- cov2cor(covariance_matrix)
+# 
+#   # Initialize probability vector
+#   n_combinations <- nrow(valid_combinations)
+#   mvn_probabilities <- numeric(n_combinations)
+# 
+#   # Calculate MVN probability for each combination
+#   for(i in 1:n_combinations) {
+#     current_combination <- as.numeric(valid_combinations[i,])
+# 
+#     # Use actual frequencies as means
+#     means <- symptom_frequencies
+# 
+#     # Set bounds based on presence/absence of symptoms
+#     lower_bounds <- ifelse(current_combination == 1, symptom_frequencies, -Inf)
+#     upper_bounds <- ifelse(current_combination == 1, Inf, symptom_frequencies)
+# 
+#     # Calculate probability
+#     prob <- try({
+#       mvtnorm::pmvnorm(
+#         lower = lower_bounds,
+#         upper = upper_bounds,
+#         mean = means,
+#         sigma = correlation_matrix
+#       )
+#     }, silent = TRUE)
+# 
+#     if(!inherits(prob, "try-error")) {
+#       mvn_probabilities[i] <- prob[1]
+#     } else {
+#       mvn_probabilities[i] <- NA
+#     }
+#   }
+# 
+#   # Add MVN probabilities to results
+#   valid_combinations$prob_mvn <- mvn_probabilities
+# 
+#   # 7.5. Method 5: Log-linear Model # ERROR BECAUSE NO VARIATION
+#   X <- as.matrix(valid_binarized_all) #Convert binarized data to a matrix
+#   X[is.na(X)] <- 0 #Replace NAs with 0
+#   y <- rep(1, nrow(X)) #Create vector of 1's with same length as number of patients for constant response for density estimation
+#   loglinear_model <- cv.glmnet(X, y, family = "poisson")
+# 
+#   # Define probability function
+#   loglinear_prob <- function(combination) {
+#     # Ensure combination is properly formatted
+#     combination_matrix <- matrix(as.numeric(combination), nrow = 1)
+#     prob <- exp(predict(loglinear_model, newx = combination_matrix, s = "lambda.min"))
+#     return(max(prob[1], 1e-10))
+#   }
+#   valid_combinations$prob_loglinear <- apply(valid_combinations, 1, loglinear_prob)
+# 
+#   # 7.6. Method 6: Ising Model 
+#   # Fit Ising model
+#   ising_data <- as.matrix(valid_binarized_all)
+#   # Convert to numeric and ensure binary
+#   ising_data <- matrix(as.numeric(ising_data), nrow = nrow(ising_data))
+#   ising_data[is.na(ising_data)] <- 0
+#   
+#   ising_model <- EstimateIsing(ising_data, method = "pl") # Pseudo-likelihood estimation
+#   
+#   ising_prob <- function(combination) {
+#     # Ensure combination is numeric binary
+#     combination <- as.numeric(combination)
+#     # Calculate energy of the configuration
+#     energy <- CalculateEnergy(combination, ising_model$graph)
+#     # Convert energy to probability
+#     prob <- exp(-energy) / ising_model$Z # Z is the partition function
+#     return(max(prob, 1e-10))
+#   }
+#   valid_combinations$prob_ising <- apply(valid_combinations, 1, ising_prob)
+#   
+#   # Normalize probabilities to sum to 1 for each method
+#   normalize_probs <- function(probs) {
+#     return(probs / sum(probs, na.rm = TRUE))
+#   }
+#   
+#   prob_columns <- grep("^prob_", colnames(valid_combinations), value = TRUE)
+#   valid_combinations[prob_columns] <- lapply(valid_combinations[prob_columns], normalize_probs)
+#   
+#   return(valid_combinations)
+# }
+# 
+# ### Applying function to our data
+# sympcomb_prob_binarized <- calculate_sympcombprob(simulated_ptsd_data)
+```
 ## x. Session Info
 
 ```{r Session Info, echo=FALSE, message=FALSE}
