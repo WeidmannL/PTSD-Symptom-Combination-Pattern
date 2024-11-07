@@ -656,12 +656,84 @@ description_and_comparison_symp_del_merged_binarized_possible_real_without_total
 ```
 ##### 5.3.3. Application of the generated functions  
 ###### 5.3.3.1. Deletion of symptom 1
-```{r Deletion of symptom 3, echo=FALSE, message=FALSE}
+```{r Deletion of symptom 1, echo=FALSE, message=FALSE}
   ## Applying function “create_possible_combinedwith_real_binarized_without_total_symp_del“
 possible_combinedwith_real_binarized_without_total_symp_del_1 <- create_possible_combined_with_real_binarized_without_total_symp_del(data2, 1)
 
   ## Applying function “description_and_comparison_symp_del_merged_binarized_possible_real_without_total“
 description_and_comparison_symp_del_merged_binarized_possible_real_without_total(possible_combinedwith_real_binarized_without_total, possible_combinedwith_real_binarized_without_total_symp_del_1)
+```
+###### 5.3.3.2. Deletion of each symptom and analysis of the impact of the deleted symptom on the diagnosis
+```{r Deletion of each symptom and analysis of the impact of the deleted symptom on the diagnosis, echo=FALSE, message=FALSE}
+  ## Function to analyze impact of removing each symptom
+  # Input-data: real-world dataset fulfilling diagnostic criteria, 20 columns with binarized symptoms, each row corresponds to an individual
+analyze_deletion_each_symptom <- function(data) {
+  # Store results
+  results <- data.frame(
+    symptom = 1:20,
+    n_diagnoses = numeric(20),
+    diff_diagnoses = numeric(20),
+    n_theoretical_combinations = numeric(20),
+    diff_theoretical_combinations = numeric(20),
+    n_actual_combinations = numeric(20),
+    diff_actual_combinations = numeric(20),
+    perc_possible_combinations = numeric(20),
+    diff_perc_possible_combinations = numeric(20)
+  )
+  
+  # Get baseline metrics (with all symptoms)
+  baseline <- create_possible_combinedwith_real_binarized_without_total(data)
+  baseline_desc <- description_merged_binarized_possible_real_without_total(baseline)
+  
+  # Store baseline values
+  baseline_diagnoses <- as.numeric(baseline_desc$Matrix1[1,1])
+  baseline_theoretical <- as.numeric(baseline_desc$Matrix1[2,1])
+  baseline_actual <- as.numeric(baseline_desc$Matrix1[3,1])
+  baseline_percentage <- as.numeric(gsub("[^0-9.]", "", baseline_desc$Matrix1[4,1]))
+  
+  # Analyze each symptom
+  for(i in 1:20) {
+    # Calculate metrics without current symptom
+    current <- create_possible_combined_with_real_binarized_without_total_symp_del(data2, i)
+    current_desc <- description_merged_binarized_possible_real_without_total(current)
+    
+    # Store results
+    results$n_diagnoses[i] <- as.numeric(current_desc$Matrix1[1,1])
+    results$diff_diagnoses[i] <- results$n_diagnoses[i] - baseline_diagnoses
+    
+    results$n_theoretical_combinations[i] <- as.numeric(current_desc$Matrix1[2,1])
+    results$diff_theoretical_combinations[i] <- results$n_theoretical_combinations[i] - baseline_theoretical
+    
+    results$n_actual_combinations[i] <- as.numeric(current_desc$Matrix1[3,1])
+    results$diff_actual_combinations[i] <- results$n_actual_combinations[i] - baseline_actual
+    
+    results$perc_possible_combinations[i] <- as.numeric(gsub("[^0-9.]", "", current_desc$Matrix1[4,1]))
+    results$diff_perc_possible_combinations[i] <- results$perc_possible_combinations[i] - baseline_percentage
+  }
+  
+  # Add baseline row
+  baseline_row <- data.frame(
+    symptom = "no deletion",
+    n_diagnoses = baseline_diagnoses,
+    diff_diagnoses = 0,
+    n_theoretical_combinations = baseline_theoretical,
+    diff_theoretical_combinations = 0,
+    n_actual_combinations = baseline_actual,
+    diff_actual_combinations = 0,
+    perc_possible_combinations = baseline_percentage,
+    diff_perc_possible_combinations = 0
+  )
+  
+  results <- rbind(baseline_row, results)
+  
+  # Order results by impact on diagnoses
+  results <- results[order(abs(results$diff_diagnoses)), ]
+  
+  return(results)
+}
+
+  ## Applying function “analyze_deletion_each_symptom“
+analysis_del_each_symptom <- analyze_deletion_each_symptom(data2)
 ```
 ## 6. Theoretically possible combinations of nonbinarized symptoms fulfilling diagnosis and their frequency in real-world data
 ```{r Theoretically possible combinations of nonbinarized symptoms fulfilling diagnosis and their frequency in real-world data, echo=FALSE, message=FALSE}
@@ -878,10 +950,10 @@ symptomanalysis_condprob_pairs <- analyze_symptoms_condprob_pairs(simulated_ptsd
 #   # Filter binarized data based on criteria
 #   valid_binarized_all <- binarized_all[criteria_met_data, ]
 #   
-#   ## Step 3: Calculate covariance matrix from binarized data (overall)
+#   ## Step 3: Calculate covariance matrix from binarized data
 #   covariance_matrix <- cov(valid_binarized_all)
 #   
-#   ## Step 4: Calculate symptom frequencies (overall)
+#   ## Step 4: Calculate symptom frequencies
 #   symptom_frequencies <- colMeans(valid_binarized_all)
 #   
 #   ## Step 5: Generate all possible symptom combinations
