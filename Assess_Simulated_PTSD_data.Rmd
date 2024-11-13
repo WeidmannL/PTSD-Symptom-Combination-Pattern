@@ -367,37 +367,37 @@ readable_summary_PTSD_Diagnosis_three_combined <- create_readable_summary(summar
 Summary for all single-symptom removals sorted by newly non-diagnosed
 ```{r Summary for all single-symptom removals sorted by newly non-diagnosed, echo=FALSE, message=FALSE}
 # Sort by newly non-diagnosed in single-symptom removals
-least_lost_diagnoses_single <- summary_PTSD_Diagnosis_individual[order(summary_PTSD_Diagnosis_individual$newly_nondiagnosed),]
-readable_least_lost_diagnoses_single <- create_readable_summary(least_lost_diagnoses_single)
-datatable(readable_least_lost_diagnoses_single,
+fewest_lost_diagnoses_single <- summary_PTSD_Diagnosis_individual[order(summary_PTSD_Diagnosis_individual$newly_nondiagnosed),]
+readable_fewest_lost_diagnoses_single <- create_readable_summary(fewest_lost_diagnoses_single)
+datatable(readable_fewest_lost_diagnoses_single,
           options = list(scrollX = TRUE))
 ```
 
-Summary for two-combined-symptom removals sorted by newly non-diagnosed (10 two-symptoms-combinations with least lost diagnoses)
+Summary for two-combined-symptom removals sorted by newly non-diagnosed (10 two-symptoms-combinations with fewest lost diagnoses)
 ```{r Summary for two-combined-symptom removals sorted by newly non-diagnosed, echo=FALSE, message=FALSE}
 # Sort by newly non-diagnosed in two-combined-symptom removals
-least_lost_diagnoses_two_combined <- summary_PTSD_Diagnosis_combined_two %>%
+fewest_lost_diagnoses_two_combined <- summary_PTSD_Diagnosis_combined_two %>%
   # Filter for PTSD_all and combined deletions (containing two underscores)
   filter(column == "PTSD_all" | grepl("_.*_", column)) %>%
   # Arrange by newly_nondiagnosed
   arrange(newly_nondiagnosed)
   # Convert to readable format
-readable_least_lost_diagnoses_two_combined <- create_readable_summary(least_lost_diagnoses_two_combined)
-datatable(head(readable_least_lost_diagnoses_two_combined, 11),
+readable_fewest_lost_diagnoses_two_combined <- create_readable_summary(fewest_lost_diagnoses_two_combined)
+datatable(head(readable_fewest_lost_diagnoses_two_combined, 11),
           options = list(scrollX = TRUE))
 ```
 
-Summary for three-combined-symptom removals sorted by newly non-diagnosed (10 three-symptoms-combinations with least lost diagnoses)
+Summary for three-combined-symptom removals sorted by newly non-diagnosed (10 three-symptoms-combinations with fewest lost diagnoses)
 ```{r Summary for three-combined-symptom removals sorted by newly non-diagnosed, echo=FALSE, message=FALSE}
 # Sort by newly non-diagnosed in three-combined-symptom removals
-least_lost_diagnoses_three_combined <- summary_PTSD_Diagnosis_combined_three %>%
+fewest_lost_diagnoses_three_combined <- summary_PTSD_Diagnosis_combined_three %>%
   # Filter for PTSD_all and combined deletions (containing two underscores)
   filter(column == "PTSD_all" | grepl("_.*_.*_", column)) %>%
   # Arrange by newly_nondiagnosed
   arrange(newly_nondiagnosed)
   # Convert to readable format
-readable_least_lost_diagnoses_three_combined <- create_readable_summary(least_lost_diagnoses_three_combined)
-datatable(head(readable_least_lost_diagnoses_three_combined, 11),
+readable_fewest_lost_diagnoses_three_combined <- create_readable_summary(fewest_lost_diagnoses_three_combined)
+datatable(head(readable_fewest_lost_diagnoses_three_combined, 11),
           options = list(scrollX = TRUE))
 ```
 
@@ -964,6 +964,124 @@ datatable(analysis_del_each_symptom$summary_metrics,
 Statistics on the distribution of patients and combinations for deletion of each symptom individually
 ```{r Statistics on the distribution of patients and combinations for deletion of each symptom individually, echo=FALSE, message=FALSE}
 datatable(analysis_del_each_symptom$distribution_metrics,
+          options = list(scrollX = TRUE))
+```
+
+##### 5.3.3.3. Extension of the previous analysis: additional analysis of the impact of several simultaneously deleted symptoms on the diagnosis
+
+```{r Extension of the previous analysis: additional analysis of the impact of several simultaneously deleted symptoms on the diagnosis, echo=FALSE, message=FALSE}
+### Function to extend the previous analysis in 5.3.3.2: Analyze impact of removing multiple selected symptoms at the same time
+  # Input-data: real-world dataset fulfilling diagnostic criteria, 20 columns with binarized symptoms, each row corresponds to an individual
+analyze_deletion_multiple_symptoms <- function(data, symptom_combinations) {
+  # First, get the single symptom deletion results
+  single_deletion_results <- analyze_deletion_each_symptom(data)
+  
+  # Initialize new rows for summary and distribution metrics
+  new_summary_rows <- tibble()
+  new_distribution_rows <- tibble()
+  
+  # Process each combination of symptoms
+  for(combo in symptom_combinations) {
+    # Convert to vector if necessary
+    if(!is.vector(combo)) {
+      combo <- c(combo)
+    }
+    
+    # Create scenario name
+    scenario_name <- paste("Without Symptoms", paste(combo, collapse = ","))
+    
+    # Calculate metrics without current combination of symptoms
+    current_data <- create_possible_combined_with_real_symp_del(data, combo)
+    current_desc <- create_description_possible_combined_with_real(current_data)
+    
+    # Add row to summary metrics
+    new_summary_row <- tibble(
+      scenario = scenario_name,
+      N_pat_diagnosed = as.numeric(current_desc$summary_statistics$value[1]),
+      N_combinations_theroretical = as.numeric(current_desc$summary_statistics$value[2]),
+      N_combinations_actual = as.numeric(current_desc$summary_statistics$value[3]),
+      Perc_combination_actual_theoretical = as.numeric(gsub("[^0-9.]", "", current_desc$summary_statistics$value[4]))/100
+    )
+    
+    # Calculate differences from baseline
+    baseline <- single_deletion_results$summary_metrics %>% 
+      filter(scenario == "All Symptoms")
+    
+    new_summary_row <- new_summary_row %>%
+      mutate(
+        N_pat_diagnosed_diff = N_pat_diagnosed - baseline$N_pat_diagnosed,
+        N_combinations_theroretical_diff = N_combinations_theroretical - baseline$N_combinations_theroretical,
+        N_combinations_actual_diff = N_combinations_actual - baseline$N_combinations_actual,
+        Perc_combination_actual_theoretical_diff = Perc_combination_actual_theoretical - 
+          as.numeric(gsub("[^0-9.]", "", baseline$Perc_combination_actual_theoretical))/100
+      )
+    
+    # Format percentage columns
+    new_summary_row <- new_summary_row %>%
+      mutate(
+        Perc_combination_actual_theoretical = scales::percent(Perc_combination_actual_theoretical, accuracy = 0.01),
+        Perc_combination_actual_theoretical_diff = scales::percent(Perc_combination_actual_theoretical_diff, accuracy = 0.01)
+      )
+    
+    new_summary_rows <- bind_rows(new_summary_rows, new_summary_row)
+    
+    # Add row to distribution metrics
+    new_distribution_row <- tibble(
+      scenario = scenario_name,
+      N_combinations_under_oneperc_pat = as.numeric(current_desc$distribution_statistics$value[1]),
+      Perc_combinations_under_oneperc_pat = as.numeric(gsub("[^0-9.]", "", current_desc$distribution_statistics$value[2]))/100,
+      N_pat_of_ten_most_common_combinations = as.numeric(current_desc$distribution_statistics$value[3]),
+      N_pat_not_ten_most_common_combinations = as.numeric(current_desc$distribution_statistics$value[4]),
+      N_pat_one_perc_most_common_combinations = as.numeric(current_desc$distribution_statistics$value[5]),
+      N_pat_fifty_perc_least_common_combinations = as.numeric(current_desc$distribution_statistics$value[6]),
+      N_combinations_first_fifty_perc_of_pat = as.numeric(current_desc$distribution_statistics$value[7]),
+      N_combinations_remaining_fifty_perc_of_pat = as.numeric(current_desc$distribution_statistics$value[8])
+    ) %>%
+    mutate(
+      Perc_combinations_under_oneperc_pat = scales::percent(Perc_combinations_under_oneperc_pat, accuracy = 0.01)
+    )
+    
+    new_distribution_rows <- bind_rows(new_distribution_rows, new_distribution_row)
+  }
+  
+  # Combine original results with new rows
+  combined_summary <- bind_rows(
+    single_deletion_results$summary_metrics,
+    new_summary_rows
+  )
+  
+  combined_distribution <- bind_rows(
+    single_deletion_results$distribution_metrics,
+    new_distribution_rows
+  )
+  
+  return(list(
+    summary_metrics = combined_summary,
+    distribution_metrics = combined_distribution
+  ))
+}
+
+### Applying function “analyze_deletion_each_symptom“
+# Define combinations of symptoms to be analyzed
+  # Here I choose the 6 two symptom combinations and the 5 three symptom combinations that lead to the fewest lost diagnoses 
+symptom_combinations <- list(
+  c(2, 14), c(2, 9), c(3, 14), c(1, 14), c(2, 11), c(3, 9),
+  c(2, 14, 18), c(2, 9, 18), c(3, 14, 18), c(1, 14, 18), c(2, 11, 18)
+)
+analysis_del_multiple_symptoms <- analyze_deletion_multiple_symptoms(binarized_diagnosed, symptom_combinations)
+```
+Overview statistics for deletion of each symptom individually and selected symptom combinations
+selected symptom combinations: 6 two-symptoms-combinations with fewest lost diagnoses and 5 three-symptoms-combinations with fewest lost diagnoses
+Here: c(2, 14), c(2, 9), c(3, 14), c(1, 14), c(2, 11), c(3, 9), c(2, 14, 18), c(2, 9, 18), c(3, 14, 18), c(1, 14, 18), c(2, 11, 18)
+```{r Overview statistics for deletion of each symptom individually and selected symptom combinations, echo=FALSE, message=FALSE}
+datatable(analysis_del_multiple_symptoms$summary_metrics,
+          options = list(scrollX = TRUE))
+```
+Statistics on the distribution of patients and combinations for deletion of each symptom individually and selected symptom combinations
+selected symptom combinations: 6 two-symptoms-combinations with fewest lost diagnoses and 5 three-symptoms-combinations with fewest lost diagnoses
+Here: c(2, 14), c(2, 9), c(3, 14), c(1, 14), c(2, 11), c(3, 9), c(2, 14, 18), c(2, 9, 18), c(3, 14, 18), c(1, 14, 18), c(2, 11, 18)
+```{r Statistics on the distribution of patients and combinations for deletion of each symptom individually and selected symptom combinations, echo=FALSE, message=FALSE}
+datatable(analysis_del_multiple_symptoms$distribution_metrics,
           options = list(scrollX = TRUE))
 ```
 
