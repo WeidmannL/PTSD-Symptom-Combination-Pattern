@@ -46,6 +46,10 @@ library(PsychPower)
 ```{r Import data, message=FALSE, warning=TRUE, include=FALSE}
 # Import data
 simulated_ptsd_data <- read_csv("Data/simulated_skewed_ptsd_data.csv")
+
+# Renaming the columns in the input data (20 columns with non-binarized symptoms) to match the expected format
+simulated_ptsd_data_renamed <- simulated_ptsd_data %>%
+  rename_with(~ paste0("symptom_", 1:20))
 ```
 
 ## 2. Sample descriptive
@@ -105,19 +109,24 @@ summary(simulated_ptsd_total)
 hist(simulated_ptsd_total$total)
 ```
 
-## 3. Renaming and Binarizing
+## 3. Binarization and selection of subset
 
-```{r Renaming and Binarizing, echo=FALSE, message=FALSE}
-## Renaming the columns in the input data (20 columns with non-binarized symptoms) to match the expected format
-  simulated_ptsd_data_renamed <- simulated_ptsd_data %>%
-    rename_with(~ paste0("symptom_", 1:20))
-
-## Binarization
+```{r Binarization and selection of subset, echo=FALSE, message=FALSE}
+## Binarization of all cases
   # Create copy of dataframe
   binarized_all <- simulated_ptsd_data_renamed
   # Binarize values (0,1 -> 0; 2,3,4 -> 1)
   binarized_all[binarized_all <= 1] <- 0
   binarized_all[binarized_all >= 2] <- 1
+
+## Selection and binarization of diagnosed cases
+  # Selecting diagnosed cases
+  binarized_diagnosed <- simulated_ptsd_total %>%
+    filter (PTSD_Diagnosis == TRUE) %>%
+    select(starts_with("symptom_"))
+  # Binarize values (0,1 -> 0; 2,3,4 -> 1)
+  binarized_diagnosed[binarized_diagnosed <= 1] <- 0
+  binarized_diagnosed[binarized_diagnosed >= 2] <- 1
 ```
 
 ## 4. Influence of deleting symptoms on the diagnosis
@@ -430,7 +439,7 @@ create_possible_combined_with_real_combinations <- function(data) {
   }
 
 ### Applying function to our data
-possible_combined_with_real <- create_possible_combined_with_real_combinations(binarized_all)
+possible_combined_with_real <- create_possible_combined_with_real_combinations(binarized_diagnosed)
 ```
 
 ### 5.2. Description of the theoretically possible and actually occurring symptom combinations fulfilling diagnosis 
@@ -805,7 +814,7 @@ create_description_and_comparison_symp_del_possible_real <- function(data_all_sy
 
 ```{r Deletion of symptom 1, echo=FALSE, message=FALSE}
 ### Applying function “create_possible_combined_with_real_symp_del“
-possible_combined_with_real_symp_del_1 <- create_possible_combined_with_real_symp_del(binarized_all, 1)
+possible_combined_with_real_symp_del_1 <- create_possible_combined_with_real_symp_del(binarized_diagnosed, 1)
 
 ### Applying function “create_description_and_comparison_symp_del_possible_real“
 description_and_comparison_symp_del_1_possible_real <- create_description_and_comparison_symp_del_possible_real(possible_combined_with_real, possible_combined_with_real_symp_del_1)
@@ -945,7 +954,7 @@ analyze_deletion_each_symptom <- function(data) {
 }
 
 ### Applying function “analyze_deletion_each_symptom“
-analysis_del_each_symptom <- analyze_deletion_each_symptom(binarized_all)
+analysis_del_each_symptom <- analyze_deletion_each_symptom(binarized_diagnosed)
 ```
 Overview statistics for deletion of each symptom individually
 ```{r Overview statistics for deletion of each symptom individually, echo=FALSE, message=FALSE}
