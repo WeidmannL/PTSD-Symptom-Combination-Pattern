@@ -393,7 +393,7 @@ datatable(readable_most_lost_diagnoses_single,
           options = list(scrollX = TRUE))
 ```
 
-Summary for two-combined-symptom removals sorted by newly non-diagnosed (100 two-symptoms-combinations with most lost diagnoses)
+Summary for two-combined-symptom removals sorted by newly non-diagnosed
 ```{r Summary for two-combined-symptom removals sorted by newly non-diagnosed, echo=FALSE, message=FALSE}
 # Sort by newly non-diagnosed in two-combined-symptom removals
 most_lost_diagnoses_two_combined <- summary_PTSD_Diagnosis_combined_two %>%
@@ -403,7 +403,7 @@ most_lost_diagnoses_two_combined <- summary_PTSD_Diagnosis_combined_two %>%
   arrange(desc(newly_nondiagnosed))
   # Convert to readable format
 readable_most_lost_diagnoses_two_combined <- create_readable_summary(most_lost_diagnoses_two_combined)
-datatable(head(readable_most_lost_diagnoses_two_combined, 100),
+datatable(readable_most_lost_diagnoses_two_combined,
           options = list(scrollX = TRUE))
 ```
 
@@ -2061,21 +2061,17 @@ variant1_analyze_best_six_symptoms_diagnostic_criteria <- function(data, score_b
   
   # Pre-select top candidates from each cluster based on individual performance
   get_top_candidates <- function(data, cluster_indices, n_candidates) { # cluster_indices z.B. 1:5, n_candidates how many top candidates are chosen
-    performances <- lapply(cluster_indices, function(symptom) {
-      diagnoses <- data[, paste0("symptom_", symptom)]
-      metrics <- get_metrics(diagnoses, baseline_results)
-      score <- if(score_by == "false_cases") {
-        -metrics$false_cases
-      } else {
-        -metrics$newly_nondiagnosed
-      }
-      list(symptom = symptom, score = score)
-    })
+     # Subset data to only include rows where PTSD_all is TRUE
+    diagnosed_data <- data[baseline_results, ]
     
-    # Sort by score and take top n candidates
-    sorted <- performances[order(sapply(performances, function(x) x$score), decreasing = TRUE)] # sapply() extracts score from each list element, order() gives indices that sort the score values from highest to lowest, performances[] reorders original list using this indices
-    return(sapply(sorted[1:min(n_candidates, length(sorted))], function(x) x$symptom)) # sorted[] takes element 1:n, sapply() extracts just symptom number
-  }
+    # Calculate frequencies only for diagnosed cases
+    cluster_data <- diagnosed_data[, paste0("symptom_", cluster_indices)]
+    symptom_freq <- colSums(cluster_data)
+    
+    # Get top n most frequent symptoms
+    top_indices <- order(symptom_freq, decreasing=TRUE)[1:n_candidates]
+    return(cluster_indices[top_indices])
+}
   
   # Get top candidates from each cluster
   top_cluster1 <- get_top_candidates(binarized_data, clusters$cluster1, 3)  # Top 3 from cluster 1
