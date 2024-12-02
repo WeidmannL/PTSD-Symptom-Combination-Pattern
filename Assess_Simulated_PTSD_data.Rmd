@@ -2116,7 +2116,7 @@ PTSD_Diagnosis_best_six_symptoms_overall_min_false <- analyze_best_six_symptoms(
 summary_PTSD_Diagnosis_best_six_symptoms_overall_min_false <- summarize_ptsd_changes(PTSD_Diagnosis_best_six_symptoms_overall_min_false$diagnosis_comparison)
 # Readable summary
 readable_summary_PTSD_Diagnosis_best_six_symptoms_overall_min_false <- create_readable_summary(summary_PTSD_Diagnosis_best_six_symptoms_overall_min_false)
-# datatable(readable_summary_PTSD_Diagnosis_best_four_symptoms_overall_min_false,
+# datatable(readable_summary_PTSD_Diagnosis_best_six_symptoms_overall_min_false,
 #           options = list(scrollX = TRUE))
 ```
 
