@@ -1328,20 +1328,36 @@ analyze_selected_six_symptoms_four_required_clusters <- function(data, selected_
   ))
 }
 ```
-Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one of each cluster. selected 6 symptoms = 6 best symptoms overall as in chapter 4.2.1.
-```{r Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one of each cluster, echo=FALSE, message=FALSE}
-# The 6 selected symptoms correspond to the 6 best symptoms overall as determined in chapter 5.5.1.
+Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one of each cluster. selected 6 symptoms = 6 best symptoms overall (monothetic) as in chapter 4.2.1.
+```{r Variant 1: Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one of each cluster, echo=FALSE, message=FALSE}
+# The 6 selected symptoms correspond to the 6 best symptoms overall (monothetic) as determined in chapter 4.2.1.
 selected_symptoms_best_six_overall <- PTSD_Diagnosis_best_six_symptoms_overall_min_false_neg$best_symptoms
 
 ### Applying
-PTSD_Diagnosis_selected_six_four_required_clusters <- analyze_selected_six_symptoms_four_required_clusters(
+variant1_PTSD_Diagnosis_selected_six_four_required_clusters <- analyze_selected_six_symptoms_four_required_clusters(
   simulated_ptsd_data_renamed,
   selected_symptoms_best_six_overall
 )
 # Summary
-summary_PTSD_Diagnosis_selected_six_four_required_clusters <- summarize_ptsd_changes(PTSD_Diagnosis_selected_six_four_required_clusters$diagnosis_comparison)
-readable_summary_PTSD_Diagnosis_selected_six_four_required_clusters <- create_readable_summary(summary_PTSD_Diagnosis_selected_six_four_required_clusters)
-datatable(readable_summary_PTSD_Diagnosis_selected_six_four_required_clusters,
+summary_variant1_PTSD_Diagnosis_selected_six_four_required_clusters <- summarize_ptsd_changes(variant1_PTSD_Diagnosis_selected_six_four_required_clusters$diagnosis_comparison)
+readable_summary_variant1_PTSD_Diagnosis_selected_six_four_required_clusters <- create_readable_summary(summary_variant1_PTSD_Diagnosis_selected_six_four_required_clusters)
+datatable(readable_summary_variant1_PTSD_Diagnosis_selected_six_four_required_clusters,
+          options = list(scrollX = TRUE))
+```
+Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one of each cluster. selected 6 symptoms = 6 best symptoms with at least one symptom from each cluster (monothetic) as in chapter 4.2.3.
+```{r Variant 2: Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one of each cluster, echo=FALSE, message=FALSE}
+# The 6 selected symptoms correspond to the 6 best symptoms with at least one symptom from each cluster (monothetic)  as determined in chapter 4.2.3.
+selected_symptoms_best_six_cluster <- PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg$best_symptoms
+
+### Applying
+variant2_PTSD_Diagnosis_selected_six_four_required_clusters <- analyze_selected_six_symptoms_four_required_clusters(
+  simulated_ptsd_data_renamed,
+  selected_symptoms_best_six_cluster
+)
+# Summary
+summary_variant2_PTSD_Diagnosis_selected_six_four_required_clusters <- summarize_ptsd_changes(variant2_PTSD_Diagnosis_selected_six_four_required_clusters$diagnosis_comparison)
+readable_summary_variant2_PTSD_Diagnosis_selected_six_four_required_clusters <- create_readable_summary(summary_variant2_PTSD_Diagnosis_selected_six_four_required_clusters)
+datatable(readable_summary_variant2_PTSD_Diagnosis_selected_six_four_required_clusters,
           options = list(scrollX = TRUE))
 ```
 
