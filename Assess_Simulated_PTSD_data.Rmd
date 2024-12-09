@@ -2416,12 +2416,14 @@ readable_summary_variant2_PTSD_Diagnosis_best_six_symptoms_min_false <- create_r
 
 #### 5.5.3. Find three best 6-symptom-combinations, with at least one symptom from each cluster
 
-```{r Find three best 6-symptom-combinations, with at least one symptom from each cluster, echo=FALSE, message=FALSE}
-### Function to determine the three best 6-symptom-combinations, with at least one symptom from each cluster
+##### 5.5.3.1. Variant 1: Find three best 6-symptom-combinations, with at least one symptom from each cluster by analyzing individual importance, selecting top candidates and testing different combinations
+
+```{r Variant 1: Find three best 6-symptom-combinations, with at least one symptom from each cluster, echo=FALSE, message=FALSE}
+### Function to determine the three best 6-symptom-combinations, with at least one symptom from each cluster by analyzing individual importance, selecting top candidates and testing different combinations
   # Depending on the score_by select the best 6-symptom-combinations by minimizing the newly_nondiagnosed or by minimizing the false_cases
   # Input: data set with all patients and 20 columns with non-binarized symptoms
 ### Function to analyze six-symptom combinations where at least one symptom comes from each cluster and remaining symptoms can be from any cluster
-analyze_best_six_symptoms_by_cluster <- function(data, score_by = "false_cases") {
+variant1_analyze_best_six_symptoms_by_cluster <- function(data, score_by = "false_cases") {
   # Validate scoring method
   valid_scoring <- c("false_cases", "newly_nondiagnosed")
   if (!score_by %in% valid_scoring) {
@@ -2599,28 +2601,969 @@ analyze_best_six_symptoms_by_cluster <- function(data, score_by = "false_cases")
 }
 ```
 
-Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest newly_nondiagnosed
-```{r Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest newly_nondiagnosed, echo=FALSE, message=FALSE}
+Variant 1: Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest newly_nondiagnosed
+```{r Variant 1: Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest newly_nondiagnosed, echo=FALSE, message=FALSE}
 ### Applying to our data
-PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg <- analyze_best_six_symptoms_by_cluster(simulated_ptsd_data_renamed, score_by = "newly_nondiagnosed")
+variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg <- variant1_analyze_best_six_symptoms_by_cluster(simulated_ptsd_data_renamed, score_by = "newly_nondiagnosed")
 # Summary
-summary_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg <- summarize_ptsd_changes(PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg$diagnosis_comparison)
+summary_variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg <- summarize_ptsd_changes(variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg$diagnosis_comparison)
 # Readable summary
-readable_summary_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg <- create_readable_summary(summary_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg)
-datatable(readable_summary_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg,
+readable_summary_variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg <- create_readable_summary(summary_variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg)
+datatable(readable_summary_variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg,
           options = list(scrollX = TRUE))
 ```
 
-Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest false_cases
-```{r Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest false_cases, echo=FALSE, message=FALSE}
+Variant 1: Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest false_cases
+```{r Variant 1: Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest false_cases, echo=FALSE, message=FALSE}
 ### Applying to our data
-PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false <- analyze_best_six_symptoms_by_cluster(simulated_ptsd_data_renamed, score_by = "false_cases")
+variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false <- variant1_analyze_best_six_symptoms_by_cluster(simulated_ptsd_data_renamed, score_by = "false_cases")
 # Summary
-summary_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false <- summarize_ptsd_changes(PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false$diagnosis_comparison)
+summary_variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false <- summarize_ptsd_changes(variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false$diagnosis_comparison)
 # Readable summary
-readable_summary_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false <- create_readable_summary(summary_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false)
-# datatable(readable_summary_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false,
+readable_summary_variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false <- create_readable_summary(summary_variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false)
+# datatable(readable_summary_variant1_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false,
 #           options = list(scrollX = TRUE))
+```
+
+##### 5.5.3.2. Variant 2: Find three best 6-symptom-combinations, with at least one symptom from each cluster by checking all possibilities
+
+```{r Variant 2: Find three best 6-symptom-combinations, with at least one symptom from each cluster, echo=FALSE, message=FALSE}
+### Function to determine the three best 6-symptom-combinations, with at least one symptom from each cluster by checking all possibilities
+  # Depending on the score_by select the best 6-symptom-combinations by minimizing the newly_nondiagnosed or by minimizing the false_cases
+  # Input: data set with all patients and 20 columns with non-binarized symptoms
+variant2_analyze_best_six_symptoms_by_cluster <- function(data, score_by = "false_cases") {
+  # Validate scoring method
+  valid_scoring <- c("false_cases", "newly_nondiagnosed")
+  if (!score_by %in% valid_scoring) {
+    stop("score_by must be one of: ", paste(valid_scoring, collapse = ", "))
+  }
+  
+  # Define clusters
+  clusters <- list(
+    cluster1 = 1:5,    # Criterion A
+    cluster2 = 6:7,    # Criterion B
+    cluster3 = 8:14,   # Criterion C
+    cluster4 = 15:20   # Criterion D
+  )
+  
+  # Helper functions
+  binarize_data <- function(data) {
+    data[data <= 1] <- 0
+    data[data >= 2] <- 1
+    return(data == 1)
+  }
+  
+  # Get baseline results first
+  baseline_results <- analyze_ptsd_all(data)$PTSD_all
+  baseline_count <- sum(baseline_results)
+  
+  # Binarize data
+  binarized_data <- binarize_data(data)
+  
+  # Helper function to get diagnosis based on having all specified symptoms
+  get_diagnosis <- function(data, symptoms) {
+    subset_data <- data[, paste0("symptom_", symptoms)]
+    return(apply(subset_data, 1, all))
+  }
+  
+  # Helper function to calculate metrics
+  get_metrics <- function(current_diagnoses, baseline_results) {
+    newly_diagnosed <- sum(current_diagnoses & !baseline_results)
+    newly_nondiagnosed <- sum(!current_diagnoses & baseline_results)
+    
+    list(
+      true_positives = sum(current_diagnoses & baseline_results),
+      true_negatives = sum(!current_diagnoses & !baseline_results),
+      newly_diagnosed = newly_diagnosed,
+      newly_nondiagnosed = newly_nondiagnosed,
+      false_cases = newly_diagnosed + newly_nondiagnosed,
+      retention_rate = sum(current_diagnoses & baseline_results) / sum(baseline_results)
+    )
+  }
+  
+  # Initialize top combinations
+  top_combinations <- list(
+    first = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL),
+    second = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL),
+    third = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL)
+  )
+  
+  # Helper function to update top 3 combinations
+  update_top_combinations <- function(top_combinations, current_combination, score, diagnoses, metrics) {
+    if(score > top_combinations$first$score) {
+      top_combinations$third <- top_combinations$second
+      top_combinations$second <- top_combinations$first
+      top_combinations$first <- list(
+        combination = current_combination,
+        score = score,
+        diagnoses = diagnoses,
+        metrics = metrics
+      )
+    } else if(score > top_combinations$second$score) {
+      top_combinations$third <- top_combinations$second
+      top_combinations$second <- list(
+        combination = current_combination,
+        score = score,
+        diagnoses = diagnoses,
+        metrics = metrics
+      )
+    } else if(score > top_combinations$third$score) {
+      top_combinations$third <- list(
+        combination = current_combination,
+        score = score,
+        diagnoses = diagnoses,
+        metrics = metrics
+      )
+    }
+    return(top_combinations)
+  }
+  
+  # For each combination of one symptom from each cluster
+  for(symptom1 in clusters$cluster1) {
+    for(symptom2 in clusters$cluster2) {
+      for(symptom3 in clusters$cluster3) {
+        for(symptom4 in clusters$cluster4) {
+          # Get base combination with one from each cluster
+          base_combination <- c(symptom1, symptom2, symptom3, symptom4)
+          
+          # Get remaining symptoms to choose from (all symptoms except the base combination)
+          remaining_symptoms <- setdiff(1:20, base_combination)
+          
+          # Choose 2 more symptoms from remaining ones
+          remaining_combinations <- combn(remaining_symptoms, 2, simplify = FALSE)
+          
+          for(extra_symptoms in remaining_combinations) {
+            current_combination <- c(base_combination, extra_symptoms)
+            
+            # Get diagnoses for this combination
+            current_diagnoses <- get_diagnosis(binarized_data, current_combination)
+            
+            # Calculate metrics
+            metrics <- get_metrics(current_diagnoses, baseline_results)
+            
+            # Score based on specified method
+            score <- if(score_by == "false_cases") {
+              -metrics$false_cases
+            } else {
+              -metrics$newly_nondiagnosed
+            }
+            
+            # Update top combinations
+            top_combinations <- update_top_combinations(
+              top_combinations,
+              current_combination,
+              score,
+              current_diagnoses,
+              metrics
+            )
+          }
+        }
+      }
+    }
+  }
+  
+  # Create comparison dataframe
+  comparison_df <- data.frame(PTSD_all = baseline_results)
+  
+  # Add each of the top 3 combinations
+  for(rank in c("first", "second", "third")) {
+    col_name <- sprintf(
+      "%s_symptoms_%s",
+      rank,
+      paste(top_combinations[[rank]]$combination, collapse = "_")
+    )
+    comparison_df[[col_name]] <- top_combinations[[rank]]$diagnoses
+  }
+  
+  return(list(
+    best_symptoms = top_combinations$first$combination,
+    best_symptom_names = paste0("symptom_", top_combinations$first$combination),
+    best_metrics = top_combinations$first$metrics,
+    second_best_symptoms = top_combinations$second$combination,
+    second_symptom_names = paste0("symptom_", top_combinations$second$combination),
+    second_metrics = top_combinations$second$metrics,
+    third_best_symptoms = top_combinations$third$combination,
+    third_symptom_names = paste0("symptom_", top_combinations$third$combination),
+    third_metrics = top_combinations$third$metrics,
+    original_diagnoses = sum(baseline_results),
+    diagnosis_comparison = comparison_df
+  ))
+}
+```
+Variant 2: Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest newly_nondiagnosed
+```{r Variant 2: Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest newly_nondiagnosed, echo=FALSE, message=FALSE}
+### Applying to our data
+variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg <- variant2_analyze_best_six_symptoms_by_cluster(simulated_ptsd_data_renamed, score_by = "newly_nondiagnosed")
+# Summary
+summary_variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg <- summarize_ptsd_changes(variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg$diagnosis_comparison)
+# Readable summary
+readable_summary_variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg <- create_readable_summary(summary_variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg)
+datatable(readable_summary_variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false_neg,
+          options = list(scrollX = TRUE))
+```
+Variant 2: Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest false_cases
+```{r Variant 2: Summary for three best six-symptom-combinations with at least one from each cluster. Best means fewest false_cases, echo=FALSE, message=FALSE}
+### Applying to our data
+variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false <- variant2_analyze_best_six_symptoms_by_cluster(simulated_ptsd_data_renamed, score_by = "false_cases")
+# Summary
+summary_variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false <- summarize_ptsd_changes(variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false$diagnosis_comparison)
+# Readable summary
+readable_summary_variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false <- create_readable_summary(summary_variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false)
+datatable(readable_summary_variant2_PTSD_Diagnosis_best_six_symptoms_by_cluster_min_false,
+          options = list(scrollX = TRUE))
+```
+
+### 5.6. Polythetic diagnostic criteria: the three best 6 symptom combinations for which the diagnosis is fulfilled with at least 4/6
+
+#### 5.6.1. Three best 6-symptom combinations, of which at least 4 must be present to fulfill the diagnosis, regardless of the cluster
+
+```{r Three best 6-symptom combinations, of which at least 4 must be present to fulfill the diagnosis, regardless of the cluster, echo=FALSE, message=FALSE}
+### Function to determine the three best 6-symptom-combinations overall, where at least 4 need to be present for diagnosis, regardless of which cluster they belong to.
+  # Depending on the score_by select the best 6-symptom-combinations by minimizing the newly_nondiagnosed or by minimizing the false_cases
+  # Input: data set with all patients and 20 columns with non-binarized symptoms
+analyze_best_six_symptoms_four_required <- function(data, score_by = "false_cases") {
+  # Validate scoring method
+  valid_scoring <- c("false_cases", "newly_nondiagnosed")
+  if (!score_by %in% valid_scoring) {
+    stop("score_by must be one of: ", paste(valid_scoring, collapse = ", "))
+  }
+  
+  # Helper functions
+  binarize_data <- function(data) {
+    data[data <= 1] <- 0
+    data[data >= 2] <- 1
+    return(data == 1) # Convert to logical
+  }
+  
+  # Get baseline results first
+  baseline_results <- analyze_ptsd_all(data)$PTSD_all
+  baseline_count <- sum(baseline_results)
+  
+  # Binarize data
+  binarized_data <- binarize_data(data)
+  
+  # Helper function to get diagnosis based on having at least 4 of the specified 6 symptoms
+  get_diagnosis <- function(data, symptoms) {
+    subset_data <- data[, paste0("symptom_", symptoms)]
+    return(rowSums(subset_data) >= 4)  # At least 4 symptoms must be present
+  }
+  
+  # Helper function to calculate metrics
+  get_metrics <- function(current_diagnoses, baseline_results) {
+    newly_diagnosed <- sum(current_diagnoses & !baseline_results)
+    newly_nondiagnosed <- sum(!current_diagnoses & baseline_results)
+    
+    list(
+      true_positives = sum(current_diagnoses & baseline_results),
+      true_negatives = sum(!current_diagnoses & !baseline_results),
+      newly_diagnosed = newly_diagnosed,
+      newly_nondiagnosed = newly_nondiagnosed,
+      false_cases = newly_diagnosed + newly_nondiagnosed,
+      retention_rate = sum(current_diagnoses & baseline_results) / sum(baseline_results)
+    )
+  }
+  
+  # Initialize top combinations
+  top_combinations <- list(
+    first = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL),
+    second = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL),
+    third = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL)
+  )
+  
+  # Get all possible combinations of 6 symptoms
+  all_symptoms <- 1:20
+  combinations <- combn(all_symptoms, 6, simplify = FALSE)
+  
+  # Test each combination
+  for(combination in combinations) {
+    # Get diagnoses and calculate metrics
+    current_diagnoses <- get_diagnosis(binarized_data, combination)
+    metrics <- get_metrics(current_diagnoses, baseline_results)
+    
+    # Score based on specified method
+    score <- if(score_by == "false_cases") {
+      -metrics$false_cases
+    } else {
+      -metrics$newly_nondiagnosed
+    }
+    
+    # Update top combinations if needed
+    if(score > top_combinations$first$score) {
+      top_combinations$third <- top_combinations$second
+      top_combinations$second <- top_combinations$first
+      top_combinations$first <- list(
+        combination = combination,
+        score = score,
+        diagnoses = current_diagnoses,
+        metrics = metrics
+      )
+    } else if(score > top_combinations$second$score) {
+      top_combinations$third <- top_combinations$second
+      top_combinations$second <- list(
+        combination = combination,
+        score = score,
+        diagnoses = current_diagnoses,
+        metrics = metrics
+      )
+    } else if(score > top_combinations$third$score) {
+      top_combinations$third <- list(
+        combination = combination,
+        score = score,
+        diagnoses = current_diagnoses,
+        metrics = metrics
+      )
+    }
+  }
+  
+  # Create comparison dataframe
+  make_column_name <- function(combination) {
+    sprintf("symptom_%d_%d_%d_%d_%d_%d", 
+            combination[1], combination[2], combination[3],
+            combination[4], combination[5], combination[6])
+  }
+  
+  comparison_df <- data.frame(
+    PTSD_all = baseline_results,
+    top_combinations$first$diagnoses,
+    top_combinations$second$diagnoses,
+    top_combinations$third$diagnoses
+  )
+  names(comparison_df)[2:4] <- c(
+    make_column_name(top_combinations$first$combination),
+    make_column_name(top_combinations$second$combination),
+    make_column_name(top_combinations$third$combination)
+  )
+  
+  return(list(
+    best_symptoms = top_combinations$first$combination,
+    best_symptom_names = paste0("symptom_", top_combinations$first$combination),
+    best_metrics = top_combinations$first$metrics,
+    second_best_symptoms = top_combinations$second$combination,
+    second_symptom_names = paste0("symptom_", top_combinations$second$combination),
+    second_metrics = top_combinations$second$metrics,
+    third_best_symptoms = top_combinations$third$combination,
+    third_symptom_names = paste0("symptom_", top_combinations$third$combination),
+    third_metrics = top_combinations$third$metrics,
+    original_diagnoses = sum(baseline_results),
+    diagnosis_comparison = comparison_df
+  ))
+}
+```
+Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, regardless of the cluster. Best means fewest newly_nondiagnosed
+```{r Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, regardless of the cluster. Best means fewest newly_nondiagnosed, echo=FALSE, message=FALSE}
+### Applying to our data
+PTSD_Diagnosis_best_six_four_required_min_false_neg <- analyze_best_six_symptoms_four_required(simulated_ptsd_data_renamed, score_by = "newly_nondiagnosed")
+# Summary
+summary_PTSD_Diagnosis_best_six_four_required_min_false_neg <- summarize_ptsd_changes(PTSD_Diagnosis_best_six_four_required_min_false_neg$diagnosis_comparison)
+# Readable summary
+readable_summary_PTSD_Diagnosis_best_six_four_required_min_false_neg <- create_readable_summary(summary_PTSD_Diagnosis_best_six_four_required_min_false_neg)
+datatable(readable_summary_PTSD_Diagnosis_best_six_four_required_min_false_neg,
+          options = list(scrollX = TRUE))
+```
+Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, regardless of the cluster. Best means fewest false_cases
+```{r Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, regardless of the cluster. Best means fewest false_cases, echo=FALSE, message=FALSE}
+### Applying to our data
+PTSD_Diagnosis_best_six_four_required_min_false <- analyze_best_six_symptoms_four_required(simulated_ptsd_data_renamed, score_by = "false_cases")
+# Summary
+summary_PTSD_Diagnosis_best_six_four_required_min_false <- summarize_ptsd_changes(PTSD_Diagnosis_best_six_four_required_min_false$diagnosis_comparison)
+# Readable summary
+readable_summary_PTSD_Diagnosis_best_six_four_required_min_false <- create_readable_summary(summary_PTSD_Diagnosis_best_six_four_required_min_false)
+datatable(readable_summary_PTSD_Diagnosis_best_six_four_required_min_false,
+          options = list(scrollX = TRUE))
+```
+
+#### 5.6.2. Three best 6-symptom combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster
+
+##### 5.6.2.1. Variant 1: Identification of the best three six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster by analyzing individual importance, selecting top candidates and testing different combinations
+```{r Variant 1: Identification of the best three six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster, echo=FALSE, message=FALSE}
+### Function to determine the three best 6-symptom-combinations overall, where at least 4 need to be present for diagnosis, one from each cluster by 1. analyzing individual importance of symptoms, 2. selecting most important symptoms from each cluster as candidates, 3. testing different combinations of these candidates to chose best
+  # Depending on the score_by select the best 6-symptom-combinations by minimizing the newly_nondiagnosed or by minimizing the false_cases
+  # Input: data set with all patients and 20 columns with non-binarized symptoms
+variant1_analyze_best_six_symptoms_four_required_clusters<- function(data, score_by = "false_cases") {
+  # Validate scoring method
+  valid_scoring <- c("false_cases", "newly_nondiagnosed")
+  if (!score_by %in% valid_scoring) {
+    stop("score_by must be one of: ", paste(valid_scoring, collapse = ", "))
+  }
+  
+  # Define clusters
+  clusters <- list(
+    cluster1 = 1:5,    # Criterion A
+    cluster2 = 6:7,    # Criterion B
+    cluster3 = 8:14,   # Criterion C
+    cluster4 = 15:20   # Criterion D
+  )
+  
+  # Helper functions
+  binarize_data <- function(data) {
+    data[data <= 1] <- 0
+    data[data >= 2] <- 1
+    return(data == 1)
+  }
+  
+  # Get baseline results first
+  baseline_results <- analyze_ptsd_all(data)$PTSD_all
+  
+  # Binarize data
+  binarized_data <- binarize_data(data)
+  
+  # Pre-select top candidates from each cluster based on individual performance
+  get_top_candidates <- function(data, cluster_indices, n_candidates) {
+    diagnosed_data <- data[baseline_results, ]
+    cluster_data <- diagnosed_data[, paste0("symptom_", cluster_indices)]
+    symptom_freq <- colSums(cluster_data)
+    top_indices <- order(symptom_freq, decreasing=TRUE)[1:min(n_candidates, length(cluster_indices))]
+    return(cluster_indices[top_indices])
+  }
+  
+  # Get top candidates from each cluster
+  message("Pre-selecting top candidates from each cluster...")
+  top_cluster1 <- get_top_candidates(binarized_data, clusters$cluster1, 3)  # Top 3 from cluster 1
+  top_cluster2 <- get_top_candidates(binarized_data, clusters$cluster2, 2)  # All from cluster 2
+  top_cluster3 <- get_top_candidates(binarized_data, clusters$cluster3, 3)  # Top 3 from cluster 3
+  top_cluster4 <- get_top_candidates(binarized_data, clusters$cluster4, 3)  # Top 3 from cluster 4
+  
+  # Helper function to check cluster representation
+  check_cluster_representation <- function(present_symptoms) {
+    sapply(clusters, function(cluster) {
+      any(present_symptoms %in% cluster)
+    }) %>% all()
+  }
+  
+  # Helper function to get diagnosis with optimized criteria checking
+  get_diagnosis <- function(data, symptoms) {
+    subset_data <- data[, paste0("symptom_", symptoms)]
+    return(apply(subset_data, 1, function(row) {
+      present_symptoms <- symptoms[which(row)]
+      num_present <- length(present_symptoms)
+      if(num_present >= 4) {
+        # Only check cluster representation if we have enough symptoms
+        check_cluster_representation(present_symptoms)
+      } else {
+        FALSE
+      }
+    }))
+  }
+  
+  # Helper function to calculate metrics
+  get_metrics <- function(current_diagnoses, baseline_results) {
+    newly_diagnosed <- sum(current_diagnoses & !baseline_results)
+    newly_nondiagnosed <- sum(!current_diagnoses & baseline_results)
+    list(
+      newly_diagnosed = newly_diagnosed,
+      newly_nondiagnosed = newly_nondiagnosed,
+      false_cases = newly_diagnosed + newly_nondiagnosed
+    )
+  }
+  
+  # Initialize results
+  best_combinations <- list(
+    first = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL),
+    second = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL),
+    third = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL)
+  )
+  
+  # Generate all valid combinations more efficiently
+  message("Generating and testing combinations...")
+  total_combinations <- 0
+  valid_combinations <- list()
+  
+  # First, ensure one from each cluster
+  for(s1 in top_cluster1) {
+    for(s2 in top_cluster2) {
+      for(s3 in top_cluster3) {
+        for(s4 in top_cluster4) {
+          base_combination <- c(s1, s2, s3, s4)
+          # Get remaining available symptoms
+          available_symptoms <- setdiff(
+            c(top_cluster1, top_cluster2, top_cluster3, top_cluster4),
+            base_combination
+          )
+          # Add two more symptoms from available ones
+          if(length(available_symptoms) >= 2) {
+            additional_pairs <- combn(available_symptoms, 2, simplify = FALSE)
+            for(pair in additional_pairs) {
+              valid_combinations[[length(valid_combinations) + 1]] <- 
+                sort(c(base_combination, pair))
+              total_combinations <- total_combinations + 1
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  message(sprintf("Testing %d valid combinations...", total_combinations))
+  
+  # Test each combination
+  for(i in seq_along(valid_combinations)) {
+    if(i %% 100 == 0) {
+      message(sprintf("Progress: %d/%d combinations tested", i, total_combinations))
+    }
+    
+    combination <- valid_combinations[[i]]
+    current_diagnoses <- get_diagnosis(binarized_data, combination)
+    metrics <- get_metrics(current_diagnoses, baseline_results)
+    
+    # Score based on specified method
+    score <- if(score_by == "false_cases") {
+      -metrics$false_cases
+    } else {
+      -metrics$newly_nondiagnosed
+    }
+    
+    # Update best combinations
+    if(score > best_combinations$first$score) {
+      best_combinations$third <- best_combinations$second
+      best_combinations$second <- best_combinations$first
+      best_combinations$first <- list(
+        combination = combination,
+        score = score,
+        diagnoses = current_diagnoses,
+        metrics = metrics
+      )
+    } else if(score > best_combinations$second$score && 
+              !identical(combination, best_combinations$first$combination)) {
+      best_combinations$third <- best_combinations$second
+      best_combinations$second <- list(
+        combination = combination,
+        score = score,
+        diagnoses = current_diagnoses,
+        metrics = metrics
+      )
+    } else if(score > best_combinations$third$score && 
+             !identical(combination, best_combinations$first$combination) && 
+             !identical(combination, best_combinations$second$combination)) {
+      best_combinations$third <- list(
+        combination = combination,
+        score = score,
+        diagnoses = current_diagnoses,
+      metrics = metrics
+      )
+    }
+  }
+  
+  # Create comparison dataframe
+  comparison_df <- data.frame(
+    PTSD_all = baseline_results,
+    best_combinations$first$diagnoses,
+    best_combinations$second$diagnoses,
+    best_combinations$third$diagnoses
+  )
+  colnames(comparison_df)[2:4] <- sapply(c("first", "second", "third"), function(rank) {
+    sprintf("symptoms_%s", paste(best_combinations[[rank]]$combination, collapse = "_"))
+  })
+  
+  message("Analysis complete!")
+  
+  return(list(
+    best_symptoms = best_combinations$first$combination,
+    best_symptom_names = paste0("symptom_", best_combinations$first$combination),
+    best_metrics = best_combinations$first$metrics,
+    second_best_symptoms = best_combinations$second$combination,
+    second_symptom_names = paste0("symptom_", best_combinations$second$combination),
+    second_metrics = best_combinations$second$metrics,
+    third_best_symptoms = best_combinations$third$combination,
+    third_symptom_names = paste0("symptom_", best_combinations$third$combination),
+    third_metrics = best_combinations$third$metrics,
+    original_diagnoses = sum(baseline_results),
+    diagnosis_comparison = comparison_df
+  ))
+}
+```
+
+Variant 1: Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster. Best means fewest newly_nondiagnosed
+```{r Variant 1: Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster. Best means fewest newly_nondiagnosed, echo=FALSE, message=FALSE}
+### Applying to our data
+variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg <- variant1_analyze_best_six_symptoms_four_required_clusters(simulated_ptsd_data_renamed, score_by = "newly_nondiagnosed")
+# Summary
+summary_variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg <- summarize_ptsd_changes(variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg$diagnosis_comparison)
+# Readable summary
+readable_summary_variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg <- create_readable_summary(summary_variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg)
+datatable(readable_summary_variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg,
+          options = list(scrollX = TRUE))
+```
+
+Variant 1: Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster. Best means fewest false_cases
+```{r Variant 1: Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster. Best means fewest false_cases, echo=FALSE, message=FALSE}
+### Applying to our data
+variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false <- variant1_analyze_best_six_symptoms_four_required_clusters(simulated_ptsd_data_renamed, score_by = "false_cases")
+# Summary
+summary_variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false <- summarize_ptsd_changes(variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false$diagnosis_comparison)
+# Readable summary
+readable_summary_variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false <- create_readable_summary(summary_variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false)
+datatable(readable_summary_variant1_PTSD_Diagnosis_best_six_four_required_clusters_min_false,
+          options = list(scrollX = TRUE))
+```
+
+##### 5.6.2.2. Variant 2: Identification of the best three six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster by analyzing all possible combinations
+```{r Variant 2: Identification of the best three six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster, echo=FALSE, message=FALSE}
+### Function to determine the three best 6-symptom-combinations overall, where at least 4 need to be present for diagnosis, one from each cluster by testing all valid (at least one symptom from each cluster) combinations
+  # Depending on the score_by select the best 6-symptom-combinations by minimizing the newly_nondiagnosed or by minimizing the false_cases
+  # Input: data set with all patients and 20 columns with non-binarized symptoms
+variant2_analyze_best_six_symptoms_four_required_clusters <- function(data, score_by = "false_cases") {
+  # Validate scoring method
+  valid_scoring <- c("false_cases", "newly_nondiagnosed")
+  if (!score_by %in% valid_scoring) {
+    stop("score_by must be one of: ", paste(valid_scoring, collapse = ", "))
+  }
+  
+  # Define clusters
+  clusters <- list(
+    cluster1 = 1:5,    # Criterion A
+    cluster2 = 6:7,    # Criterion B
+    cluster3 = 8:14,   # Criterion C
+    cluster4 = 15:20   # Criterion D
+  )
+  
+  # Create lookup array for faster cluster membership checking
+  cluster_lookup <- integer(20)
+  for(i in seq_along(clusters)) {
+    cluster_lookup[clusters[[i]]] <- i
+  }
+  
+  # Helper functions
+  binarize_data <- function(data) {
+    data[data <= 1] <- 0
+    data[data >= 2] <- 1
+    return(as.matrix(data == 1))  # Convert to matrix for faster operations
+  }
+  
+  # Get baseline results first
+  baseline_results <- analyze_ptsd_all(data)$PTSD_all
+  
+  # Binarize data
+  binarized_data <- binarize_data(data)
+  
+  # Fast cluster representation check using lookup
+  check_cluster_representation <- function(symptoms) {
+    length(unique(cluster_lookup[symptoms])) == 4
+  }
+  
+  # Optimized diagnosis function
+  get_diagnosis <- function(data, symptoms) {
+    subset_data <- data[, symptoms, drop = FALSE]
+    symptom_counts <- rowSums(subset_data)
+    sufficient_rows <- which(symptom_counts >= 4)
+    
+    result <- logical(nrow(data))
+    
+    if(length(sufficient_rows) > 0) {
+      for(i in sufficient_rows) {
+        present_symptoms <- symptoms[subset_data[i,] == 1]
+        if(length(present_symptoms) >= 4) {
+          result[i] <- check_cluster_representation(present_symptoms)
+        }
+      }
+    }
+    
+    return(result)
+  }
+  
+  # Helper function to calculate metrics
+  get_metrics <- function(current_diagnoses, baseline_results) {
+    newly_diagnosed <- sum(current_diagnoses & !baseline_results)
+    newly_nondiagnosed <- sum(!current_diagnoses & baseline_results)
+    list(
+      newly_diagnosed = newly_diagnosed,
+      newly_nondiagnosed = newly_nondiagnosed,
+      false_cases = newly_diagnosed + newly_nondiagnosed
+    )
+  }
+  
+  # Initialize best combinations
+  best_combinations <- list(
+    first = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL),
+    second = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL),
+    third = list(combination = NULL, score = -Inf, diagnoses = NULL, metrics = NULL)
+  )
+  
+  # Generate combinations with filtering
+  message("Generating combinations...")
+  valid_combinations <- vector("list", 1000)  # Pre-allocate with reasonable size
+  combination_count <- 0
+  
+  for(s1 in clusters$cluster1) {
+    message(sprintf("Processing cluster 1: symptom %d/%d", s1, max(clusters$cluster1)))
+    for(s2 in clusters$cluster2) {
+      for(s3 in clusters$cluster3) {
+        for(s4 in clusters$cluster4) {
+          base <- c(s1, s2, s3, s4)
+          remaining <- setdiff(1:20, base)
+          pairs <- combn(remaining, 2, simplify = FALSE)
+          
+          for(pair in pairs) {
+            combination_count <- combination_count + 1
+            if(combination_count > length(valid_combinations)) {
+              length(valid_combinations) <- length(valid_combinations) * 2
+            }
+            valid_combinations[[combination_count]] <- sort(c(base, pair))
+          }
+        }
+      }
+    }
+  }
+  
+  valid_combinations <- valid_combinations[1:combination_count]
+  valid_combinations <- unique(valid_combinations)
+  total_combinations <- length(valid_combinations)
+  message(sprintf("Testing %d combinations...", total_combinations))
+  
+  # Test combinations with progress updates every 5%
+  report_interval <- max(1, floor(total_combinations / 20))
+  
+  for(i in seq_along(valid_combinations)) {
+    if(i %% report_interval == 0) {
+      message(sprintf("Progress: %.1f%%", i/total_combinations*100))
+    }
+    
+    combination <- valid_combinations[[i]]
+    current_diagnoses <- get_diagnosis(binarized_data, combination)
+    metrics <- get_metrics(current_diagnoses, baseline_results)
+    
+    score <- if(score_by == "false_cases") {
+      -metrics$false_cases
+    } else {
+      -metrics$newly_nondiagnosed
+    }
+    
+    if(score > best_combinations$first$score) {
+      best_combinations$third <- best_combinations$second
+      best_combinations$second <- best_combinations$first
+      best_combinations$first <- list(
+        combination = combination,
+        score = score,
+        diagnoses = current_diagnoses,
+        metrics = metrics
+      )
+    } else if(score > best_combinations$second$score) {
+      best_combinations$third <- best_combinations$second
+      best_combinations$second <- list(
+        combination = combination,
+        score = score,
+        diagnoses = current_diagnoses,
+        metrics = metrics
+      )
+    } else if(score > best_combinations$third$score) {
+      best_combinations$third <- list(
+        combination = combination,
+        score = score,
+        diagnoses = current_diagnoses,
+        metrics = metrics
+      )
+    }
+  }
+  
+  # Create comparison dataframe
+  comparison_df <- data.frame(
+    PTSD_all = baseline_results,
+    best_combinations$first$diagnoses,
+    best_combinations$second$diagnoses,
+    best_combinations$third$diagnoses
+  )
+  colnames(comparison_df)[2:4] <- sapply(1:3, function(i) {
+    sprintf("symptoms_%s", paste(best_combinations[[i]]$combination, collapse = "_"))
+  })
+  
+  return(list(
+    best_symptoms = best_combinations$first$combination,
+    best_symptom_names = paste0("symptom_", best_combinations$first$combination),
+    best_metrics = best_combinations$first$metrics,
+    second_best_symptoms = best_combinations$second$combination,
+    second_symptom_names = paste0("symptom_", best_combinations$second$combination),
+    second_metrics = best_combinations$second$metrics,
+    third_best_symptoms = best_combinations$third$combination,
+    third_symptom_names = paste0("symptom_", best_combinations$third$combination),
+    third_metrics = best_combinations$third$metrics,
+    original_diagnoses = sum(baseline_results),
+    diagnosis_comparison = comparison_df
+  ))
+}
+```
+Variant 2: Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster. Best means fewest newly_nondiagnosed
+```{r Variant 2: Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster. Best means fewest newly_nondiagnosed, echo=FALSE, message=FALSE}
+### Applying to our data
+variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg <- variant2_analyze_best_six_symptoms_four_required_clusters(simulated_ptsd_data_renamed, score_by = "newly_nondiagnosed")
+# Summary
+summary_variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg <- summarize_ptsd_changes(variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg$diagnosis_comparison)
+# Readable summary
+readable_summary_variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg <- create_readable_summary(summary_variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg)
+datatable(readable_summary_variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false_neg,
+          options = list(scrollX = TRUE))
+```
+
+Variant 2: Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster. Best means fewest false_cases
+```{r Variant 2: Summary for three best six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one from each cluster. Best means fewest false_cases, echo=FALSE, message=FALSE}
+### Applying to our data
+variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false <- variant2_analyze_best_six_symptoms_four_required_clusters(simulated_ptsd_data_renamed, score_by = "false_cases")
+# Summary
+summary_variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false <- summarize_ptsd_changes(variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false$diagnosis_comparison)
+# Readable summary
+readable_summary_variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false <- create_readable_summary(summary_variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false)
+datatable(readable_summary_variant2_PTSD_Diagnosis_best_six_four_required_clusters_min_false,
+          options = list(scrollX = TRUE))
+```
+
+#### 5.6.3. Summary for any selected combination of 6 symptoms, of which at least 4 symptoms must be present to fulfill the diagnosis
+
+##### 5.6.3.1. Summary for any selected 6-symptom combination, of which at least 4 symptoms must be present, regardless of cluster
+
+```{r Summary for any selected 6-symptom combination, of which at least 4 symptoms must be present, regardless of cluster, echo=FALSE, message=FALSE}
+### Function to analyze selected six symptoms, where at least 4 need to be present for diagnosis, regardless of cluster
+  # Input: data set with all patients and 20 columns with non-binarized symptoms; selected 6 symptoms
+analyze_selected_six_symptoms_four_required <- function(data, selected_symptoms) {
+  # Validate input
+  if(length(selected_symptoms) != 6 || !all(selected_symptoms %in% 1:20)) {
+    stop("Please provide exactly 6 symptoms (numbers between 1 and 20)")
+  }
+  
+  # Helper functions
+  binarize_data <- function(data) {
+    data[data <= 1] <- 0
+    data[data >= 2] <- 1
+    return(data == 1)
+  }
+  
+  # Get baseline results
+  baseline_results <- analyze_ptsd_all(data)$PTSD_all
+  
+  # Binarize data
+  binarized_data <- binarize_data(data)
+  
+  # Check diagnosis (any 4 out of 6)
+  current_diagnoses <- apply(binarized_data[, paste0("symptom_", selected_symptoms)], 1, function(row) {
+    sum(row) >= 4
+  })
+  
+  # Calculate metrics
+  metrics <- list(
+    newly_diagnosed = sum(current_diagnoses & !baseline_results),
+    newly_nondiagnosed = sum(!current_diagnoses & baseline_results),
+    false_cases = sum(current_diagnoses & !baseline_results) + 
+                 sum(!current_diagnoses & baseline_results)
+  )
+  
+  # Create comparison dataframe
+  comparison_df <- data.frame(
+    PTSD_all = baseline_results,
+    new_diagnosis = current_diagnoses
+  )
+  names(comparison_df)[2] <- sprintf("symptoms_%s", paste(selected_symptoms, collapse = "_"))
+  
+  return(list(
+    selected_symptoms = selected_symptoms,
+    symptom_names = paste0("symptom_", selected_symptoms),
+    metrics = metrics,
+    original_diagnoses = sum(baseline_results),
+    diagnosis_comparison = comparison_df
+  ))
+}
+```
+Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, regardless of cluster. selected 6 symptoms = 6 best symptoms overall as in chapter 5.5.1.
+```{r Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, regardless of cluster, echo=FALSE, message=FALSE}
+# The 6 selected symptoms correspond to the 6 best symptoms overall as determined in chapter 5.5.1.
+selected_symptoms_best_six_overall <- PTSD_Diagnosis_best_six_symptoms_overall_min_false_neg$best_symptoms
+
+### Applying
+PTSD_Diagnosis_selected_six_four_required <- analyze_selected_six_symptoms_four_required(
+  simulated_ptsd_data_renamed,
+  selected_symptoms_best_six_overall
+)
+# Summary
+summary_PTSD_Diagnosis_selected_six_four_required <- summarize_ptsd_changes(PTSD_Diagnosis_selected_six_four_required$diagnosis_comparison)
+readable_summary_PTSD_Diagnosis_selected_six_four_required <- create_readable_summary(summary_PTSD_Diagnosis_selected_six_four_required)
+datatable(readable_summary_PTSD_Diagnosis_selected_six_four_required,
+          options = list(scrollX = TRUE))
+```
+
+##### 5.6.3.2. Summary for any selected 6-symptom combination, of which at least 4 symptoms must be present, one from each cluster
+
+```{r Summary for any selected 6-symptom combination, of which at least 4 symptoms must be present, one from each cluster, echo=FALSE, message=FALSE}
+### Function to analyze selected six symptoms, where at least 4 need to be present for diagnosis, one from each cluster
+  # Input: data set with all patients and 20 columns with non-binarized symptoms; selected 6 symptoms
+analyze_selected_six_symptoms_four_required_clusters <- function(data, selected_symptoms) {
+  # Validate input
+  if(length(selected_symptoms) != 6 || !all(selected_symptoms %in% 1:20)) {
+    stop("Please provide exactly 6 symptoms (numbers between 1 and 20)")
+  }
+  
+  # Define clusters
+  clusters <- list(
+    cluster1 = 1:5,    # Criterion A
+    cluster2 = 6:7,    # Criterion B
+    cluster3 = 8:14,   # Criterion C
+    cluster4 = 15:20   # Criterion D
+  )
+  
+  # Helper functions
+  binarize_data <- function(data) {
+    data[data <= 1] <- 0
+    data[data >= 2] <- 1
+    return(data == 1)
+  }
+  
+  # Helper function to check cluster representation
+  check_cluster_representation <- function(symptoms) {
+    sapply(clusters, function(cluster) {
+      any(symptoms %in% cluster)
+    }) %>% all()
+  }
+  
+  # Get baseline results
+  baseline_results <- analyze_ptsd_all(data)$PTSD_all
+  
+  # Binarize data
+  binarized_data <- binarize_data(data)
+  
+  # Check diagnosis (4 out of 6 with cluster representation)
+  current_diagnoses <- apply(binarized_data[, paste0("symptom_", selected_symptoms)], 1, function(row) {
+    present_symptoms <- selected_symptoms[row == 1]
+    if(length(present_symptoms) >= 4) {
+      check_cluster_representation(present_symptoms)
+    } else {
+      FALSE
+    }
+  })
+  
+  # Calculate metrics
+  metrics <- list(
+    newly_diagnosed = sum(current_diagnoses & !baseline_results),
+    newly_nondiagnosed = sum(!current_diagnoses & baseline_results),
+    false_cases = sum(current_diagnoses & !baseline_results) + 
+                 sum(!current_diagnoses & baseline_results)
+  )
+  
+  # Create comparison dataframe
+  comparison_df <- data.frame(
+    PTSD_all = baseline_results,
+    new_diagnosis = current_diagnoses
+  )
+  names(comparison_df)[2] <- sprintf("symptoms_%s", paste(selected_symptoms, collapse = "_"))
+  
+  return(list(
+    selected_symptoms = selected_symptoms,
+    symptom_names = paste0("symptom_", selected_symptoms),
+    metrics = metrics,
+    original_diagnoses = sum(baseline_results),
+    diagnosis_comparison = comparison_df
+  ))
+}
+```
+Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one of each cluster. selected 6 symptoms = 6 best symptoms overall as in chapter 5.5.1.
+```{r Summary for selected six-symptom-combinations, of which at least 4 must be present to fulfill the diagnosis, one of each cluster, echo=FALSE, message=FALSE}
+# The 6 selected symptoms correspond to the 6 best symptoms overall as determined in chapter 5.5.1.
+selected_symptoms_best_six_overall <- PTSD_Diagnosis_best_six_symptoms_overall_min_false_neg$best_symptoms
+
+### Applying
+PTSD_Diagnosis_selected_six_four_required_clusters <- analyze_selected_six_symptoms_four_required_clusters(
+  simulated_ptsd_data_renamed,
+  selected_symptoms_best_six_overall
+)
+# Summary
+summary_PTSD_Diagnosis_selected_six_four_required_clusters <- summarize_ptsd_changes(PTSD_Diagnosis_selected_six_four_required_clusters$diagnosis_comparison)
+readable_summary_PTSD_Diagnosis_selected_six_four_required_clusters <- create_readable_summary(summary_PTSD_Diagnosis_selected_six_four_required_clusters)
+datatable(readable_summary_PTSD_Diagnosis_selected_six_four_required_clusters,
+          options = list(scrollX = TRUE))
 ```
 
 ## 6. Analysis of the possible combinations of binarized symptoms that fulfill the diagnosis
