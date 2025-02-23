@@ -1,5 +1,5 @@
 ---
-title: "Assess Simulated PTSD Symptoms"
+title: "PTSD comprehensive analysis"
 author:
 - "<h5 style=\"font-style:italic\"> Laura Weidmann"
 - "<h5 style=\"font-style:italic\"> Tobias R. Spiller"
